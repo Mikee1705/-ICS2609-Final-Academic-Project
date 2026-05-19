@@ -1,0 +1,108 @@
+/* The Modal (background) */
+.modal {
+    display: none;
+    /* Controlled strictly by .open class now */
+    position: fixed;
+    z-index: 1;
+
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+
+    align-items: center;
+    justify-content: center;
+}
+
+/* Modal Content */
+.modal-content {
+    background-color: #fefefe;
+    padding: 20px;
+    border: 1px solid #888;
+    
+    /* Enforce exact dimensions so they can never be overridden */
+    width: 500px !important;
+    height: 550px;
+    min-width: 180px;
+    min-height: 180px;
+    box-sizing: border-box; 
+    
+    opacity: 0;
+
+}
+
+/* The Close Button */
+.close {
+    color: #aaaaaa;
+    float: left;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* --- OPEN STATE --- */
+.modal.open {
+    display: flex; 
+    animation: fadeIn 0.3s ease forwards;
+}
+
+.modal.open .modal-content {
+    animation: slideDown 0.3s cubic-bezier(0.5, 1, 0.5, 1) 0.25s forwards;
+}
+
+/* --- CLOSING STATE (REVERSE) --- */
+.modal.closing {
+    animation: fadeOut 0.3s ease forwards;
+}
+
+.modal.closing .modal-content {
+    animation: slideUp 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* --- KEYFRAMES --- */
+@keyframes fadeIn {
+    from {
+        background-color: rgba(0, 0, 0, 0);
+    }
+    to {
+        background-color: rgba(0, 0, 0, 0.4);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        background-color: rgba(0, 0, 0, 0.4);
+    }
+    to {
+        background-color: rgba(0, 0, 0, 0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+}
