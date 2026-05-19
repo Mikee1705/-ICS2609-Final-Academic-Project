@@ -1,0 +1,7 @@
+# NetBeans build output
+build/
+dist/
+nbproject/private/
+
+# Do NOT ignore JARs in WEB-INF/lib — these are project dependencies
+!web/WEB-INF/lib/*.jar
