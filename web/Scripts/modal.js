@@ -14,15 +14,15 @@ function closeModal() {
 
 btn.onclick = function () {
     modal.classList.add("open");
-}
+};
 
 // Close modal via X button
 span.onclick = function () {
     closeModal();
-}
+};
 
 window.onclick = function (event) {
     if (event.target == modal) {
         closeModal();
-    }
-}
+    };
+};
