@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee
+                             http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+         version="3.1">
+
+    <display-name>FAP - Final Academic Project</display-name>
+    <description>Active Learning, Inc. Course Management Web Application</description>
+
+    <!-- ============================================================ -->
+    <!-- REPORT HEADER / FOOTER INFO (used in all PDF reports)        -->
+    <!-- ============================================================ -->
+    <context-param>
+        <param-name>app.name</param-name>
+        <param-value>Active Learning, Inc. Course Management System</param-value>
+    </context-param>
+    <context-param>
+        <param-name>app.version</param-name>
+        <param-value>1.0.0</param-value>
+    </context-param>
+    <context-param>
+        <param-name>report.header</param-name>
+        <param-value>Active Learning, Inc. — Course Management System</param-value>
+    </context-param>
+    <context-param>
+        <param-name>report.footer</param-name>
+        <param-value>CONFIDENTIAL — For authorized users only. Active Learning, Inc.</param-value>
+    </context-param>
+
+    <!-- ============================================================ -->
+    <!-- MYSQL CREDENTIALS (Sensitive data stored in DD as required)  -->
+    <!-- ============================================================ -->
+    <context-param>
+        <param-name>mysql.driver</param-name>
+        <param-value>com.mysql.cj.jdbc.Driver</param-value>
+    </context-param>
+    <context-param>
+        <param-name>mysql.url</param-name>
+        <param-value>jdbc:mysql://localhost:3306/fap_activelearning?useSSL=false&amp;serverTimezone=Asia/Manila&amp;allowPublicKeyRetrieval=true</param-value>
+    </context-param>
+    <context-param>
+        <param-name>mysql.username</param-name>
+        <param-value>root</param-value>
+    </context-param>
+    <context-param>
+        <param-name>mysql.password</param-name>
+        <param-value></param-value>
+        <!-- XAMPP default is blank. If you set a MySQL root password, put it here. -->
+    </context-param>
+
+    <!-- ============================================================ -->
+    <!-- DERBY CREDENTIALS                                            -->
+    <!-- ============================================================ -->
+    <context-param>
+        <param-name>derby.driver</param-name>
+        <param-value>org.apache.derby.jdbc.ClientDriver</param-value>
+    </context-param>
+    <context-param>
+        <param-name>derby.url</param-name>
+        <param-value>jdbc:derby://localhost:1527/fap_derby;create=true</param-value>
+    </context-param>
+    <context-param>
+        <param-name>derby.username</param-name>
+        <param-value>app</param-value>
+    </context-param>
+    <context-param>
+        <param-name>derby.password</param-name>
+        <param-value>app</param-value>
+    </context-param>
+
+    <!-- ============================================================ -->
+    <!-- SESSION CONFIGURATION                                        -->
+    <!-- ============================================================ -->
+    <session-config>
+        <session-timeout>30</session-timeout>
+    </session-config>
+
+    <!-- ============================================================ -->
+    <!-- WELCOME FILE                                                  -->
+    <!-- ============================================================ -->
+    <welcome-file-list>
+        <welcome-file>index.html</welcome-file>
+        <welcome-file>index.jsp</welcome-file>
+    </welcome-file-list>
+
+    <!-- ============================================================ -->
+    <!-- CUSTOM ERROR PAGES (required: no errors, customized pages)   -->
+    <!-- ============================================================ -->
+    <error-page>
+        <error-code>403</error-code>
+        <location>/error/403.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>404</error-code>
+        <location>/error/404.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>500</error-code>
+        <location>/error/500.jsp</location>
+    </error-page>
+    <error-page>
+        <exception-type>java.lang.Exception</exception-type>
+        <location>/error/500.jsp</location>
+    </error-page>
+
+</web-app>
