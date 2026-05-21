@@ -1,3 +1,26 @@
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@ page import="java.util.List" %>
+<%@ page import="Servlets.User" %> 
+<%
+    
+    HttpSession sess = request.getSession(false);
+    
+    String ClientRole = (sess != null) ? (String) sess.getAttribute("Role") : null;
+    String ClientName = (sess != null) ? (String) sess.getAttribute("UName") : null;
+    Object status = request.getAttribute("status");
+
+    
+    if (sess == null || ClientRole == null) {
+        // 401: Unauthorized / Session Expired
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        return; // CRITICAL: Stop compilation immediately
+    } else if (!"Admin".equalsIgnoreCase(ClientRole)) {
+        // 403: Forbidden / Wrong Role
+        response.sendError(HttpServletResponse.SC_FORBIDDEN);
+        return; // CRITICAL: Stop compilation immediately
+    }
+%>
+
 <!DOCTYPE html>
 <html lang="en">
 

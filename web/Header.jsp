@@ -18,25 +18,24 @@
         <!-- Navigation List -->
         <div class="position-relative mt-2 mt-md-0" style="z-index: 2;">
             <ul class="navbar-nav ml-auto flex-row align-items-center">
+                <!-- Ternary Check: If 'Role' is missing from session, hide or show Company Analytics -->
                 <li class="nav-item active px-2 px-md-4">
-                    <a class="nav-link" href="AdminAnalytics.jsp">Company Analytics</a>
+                    ${empty sessionScope.Role ? '<a class="nav-link text-muted" href="index.jsp">Sign In</a>' : '<a class="nav-link" href="AdminAnalytics.jsp">Company Analytics</a>'}
                 </li>
-                <li class="nav-item dropdown">
+
+                <!-- Ternary Check: Only render the Dropdown button if a session exists -->
+                ${empty sessionScope.Role ? '' : '
+                  <li class="nav-item dropdown">
                     <a class="btn btn-warning dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-expanded="false">
                         Edit Database
                     </a>
                     <div class="dropdown-menu dropdown-menu-right" style="position: absolute;">
-                        <a class="dropdown-item" href="Instructors_CRUD.jsp">
-                            <i class="fa-solid fa-chalkboard-user mr-2"></i>Instructors
-                        </a> 
-                        <a class="dropdown-item"  href="Students_CRUD.jsp">
-                            <i class="fa-solid fa-user-graduate mr-2"></i>Students
-                        </a>
-                        <a class="dropdown-item"  href="Courses_CRUD.jsp">
-                            <i class="fa-solid fa-book mr-2"></i>Courses
-                        </a>
+                        <a class="dropdown-item" href="Instructors_CRUD.jsp"><i class="fa-solid fa-chalkboard-user mr-2"></i>Instructors</a> 
+                        <a class="dropdown-item" href="Students_CRUD.jsp"><i class="fa-solid fa-user-graduate mr-2"></i>Students</a>
+                        <a class="dropdown-item" href="Courses_CRUD.jsp"><i class="fa-solid fa-book mr-2"></i>Courses</a>
                     </div>
-                </li>
+                  </li>
+                  '}
             </ul>
         </div>
     </div>

@@ -1,3 +1,21 @@
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@ page import="java.util.List" %>
+<%@ page import="Servlets.User" %> 
+<%
+    HttpSession sess = request.getSession(false);
+    Object ClientRole = session.getAttribute("Role");
+    Object status = request.getAttribute("status");
+    String ClientName = (String) session.getAttribute("UName");
+
+    //Role Security
+    if (sess == null || ClientRole == null) {
+        // 401: You don't know who they are (Session Expired)
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+    } else if (!"Admin".equalsIgnoreCase((String) ClientRole)) {
+        // 403: You know them, but they aren't allowed here (Wrong Role)
+        response.sendError(HttpServletResponse.SC_FORBIDDEN);
+    }
+%>
 <!DOCTYPE html>
 <html lang="en">
 

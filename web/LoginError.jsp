@@ -22,8 +22,8 @@
 
         <jsp:include page="Header.jsp" />
 
-        <main class="container text-center">
-            <h1>System Portal<h1><hr>
+        <main class="container text-center my-5">
+            <h1>SOMETHING WENT WRONG!!</h1><hr>
             <h3 style="color: red;">Authentication Failed</h3>
             <p><strong>Why are you seeing this?</strong> You ended up here because you attempted to log in without entering a valid username and password.</p>
             <p><em>System Message: <%= session.getAttribute("Error") %></em></p>
