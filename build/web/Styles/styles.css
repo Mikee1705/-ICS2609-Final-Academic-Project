@@ -20,11 +20,7 @@ body h1, body h2 {
     color: #000000;
 }
 
-.btn-warning {
-    background-color: #ffa333 !important;
-    border-color: #ffa333 !important;
-    color: white !important;
-}
+
 
 /* SPECIFIC SELECTOR CHAIN PREVENTS BOOTSTRAP OVERRIDES */
 body .navbar {
