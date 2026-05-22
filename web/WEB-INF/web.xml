@@ -9,7 +9,7 @@
     <description>Active Learning, Inc. Course Management Web Application</description>
 
     <!-- ============================================================ -->
-    <!-- REPORT HEADER / FOOTER INFO (used in all PDF reports)        -->
+    <!-- APP METADATA + PDF REPORT HEADERS                            -->
     <!-- ============================================================ -->
     <context-param>
         <param-name>app.name</param-name>
@@ -29,7 +29,19 @@
     </context-param>
 
     <!-- ============================================================ -->
-    <!-- MYSQL CREDENTIALS (Sensitive data stored in DD as required)  -->
+    <!-- ENCRYPTION + CAPTCHA SECRETS (from FrontEnd branch)          -->
+    <!-- ============================================================ -->
+    <context-param>
+        <param-name>EncryptionKey</param-name>
+        <param-value>0bj3Ct1f!c@t1on$</param-value>
+    </context-param>
+    <context-param>
+        <param-name>SecretKey</param-name>
+        <param-value>6LfUt68sAAAAAIZeSTmgd49t0wbT86WIyxRyfkVS</param-value>
+    </context-param>
+
+    <!-- ============================================================ -->
+    <!-- MYSQL CREDENTIALS                                            -->
     <!-- ============================================================ -->
     <context-param>
         <param-name>mysql.driver</param-name>
@@ -46,28 +58,82 @@
     <context-param>
         <param-name>mysql.password</param-name>
         <param-value></param-value>
-        <!-- XAMPP default is blank. If you set a MySQL root password, put it here. -->
     </context-param>
 
     <!-- ============================================================ -->
     <!-- DERBY CREDENTIALS                                            -->
+    <!-- Both naming styles kept so old LoginServlet and new UserDAO  -->
+    <!-- continue to work. Refactor to a single style once aligned.   -->
     <!-- ============================================================ -->
+    <!-- New structured style (used by DerbyConnection/UserDAO) -->
     <context-param>
         <param-name>derby.driver</param-name>
         <param-value>org.apache.derby.jdbc.ClientDriver</param-value>
     </context-param>
     <context-param>
         <param-name>derby.url</param-name>
-        <param-value>jdbc:derby://localhost:1527/fap_derby;create=true</param-value>
+        <param-value>jdbc:derby://localhost:1527/LoginDB;create=true</param-value>
     </context-param>
     <context-param>
         <param-name>derby.username</param-name>
-        <param-value>app</param-value>
+        <param-value>APP</param-value>
     </context-param>
     <context-param>
         <param-name>derby.password</param-name>
-        <param-value>app</param-value>
+        <param-value>APP</param-value>
     </context-param>
+
+    <!-- Legacy style (used by FrontEnd's LoginServlet) -->
+    <context-param>
+        <param-name>dbUserName</param-name>
+        <param-value>APP</param-value>
+    </context-param>
+    <context-param>
+        <param-name>dbPassword</param-name>
+        <param-value>APP</param-value>
+    </context-param>
+    <context-param>
+        <param-name>jdbcDriverURL</param-name>
+        <param-value>jdbc:derby</param-value>
+    </context-param>
+    <context-param>
+        <param-name>dbHostName</param-name>
+        <param-value>localhost</param-value>
+    </context-param>
+    <context-param>
+        <param-name>dbPort</param-name>
+        <param-value>1527</param-value>
+    </context-param>
+    <context-param>
+        <param-name>databaseName</param-name>
+        <param-value>LoginDB</param-value>
+    </context-param>
+    <context-param>
+        <param-name>driver</param-name>
+        <param-value>org.apache.derby.jdbc.ClientDriver</param-value>
+    </context-param>
+
+    <!-- ============================================================ -->
+    <!-- SERVLETS                                                      -->
+    <!-- Login + Captcha from FrontEnd. PDF servlets use @WebServlet.  -->
+    <!-- ============================================================ -->
+    <servlet>
+        <servlet-name>Login</servlet-name>
+        <servlet-class>Servlets.LoginServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>Login</servlet-name>
+        <url-pattern>/Login</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>CaptchaServlet</servlet-name>
+        <servlet-class>Servlets.CaptchaServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>CaptchaServlet</servlet-name>
+        <url-pattern>/CaptchaServlet</url-pattern>
+    </servlet-mapping>
 
     <!-- ============================================================ -->
     <!-- SESSION CONFIGURATION                                        -->
@@ -80,28 +146,33 @@
     <!-- WELCOME FILE                                                  -->
     <!-- ============================================================ -->
     <welcome-file-list>
-        <welcome-file>index.html</welcome-file>
         <welcome-file>index.jsp</welcome-file>
+        <welcome-file>index.html</welcome-file>
     </welcome-file-list>
 
     <!-- ============================================================ -->
-    <!-- CUSTOM ERROR PAGES (required: no errors, customized pages)   -->
+    <!-- CUSTOM ERROR PAGES                                            -->
+    <!-- Using FrontEnd's single Error.jsp since that file exists.     -->
     <!-- ============================================================ -->
     <error-page>
+        <error-code>401</error-code>
+        <location>/Error.jsp</location>
+    </error-page>
+    <error-page>
         <error-code>403</error-code>
-        <location>/error/403.jsp</location>
+        <location>/Error.jsp</location>
     </error-page>
     <error-page>
         <error-code>404</error-code>
-        <location>/error/404.jsp</location>
+        <location>/Error.jsp</location>
     </error-page>
     <error-page>
         <error-code>500</error-code>
-        <location>/error/500.jsp</location>
+        <location>/Error.jsp</location>
     </error-page>
     <error-page>
         <exception-type>java.lang.Exception</exception-type>
-        <location>/error/500.jsp</location>
+        <location>/Error.jsp</location>
     </error-page>
 
 </web-app>

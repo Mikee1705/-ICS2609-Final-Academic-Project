@@ -21,16 +21,19 @@
     padding: 20px;
     border: 1px solid #888;
     
-    /* Enforce exact dimensions so they can never be overridden */
+    /* FIX: Force exact width but let the height adapt dynamically to content */
     width: 500px !important;
-    height: 550px;
+    height: auto !important; /* Changed from 550px */
+    max-height: 90vh;        /* Keeps it from breaking past viewport ceilings */
+    overflow-y: auto;        /* Adds a scrollbar only if form content gets cut off */
+    
     min-width: 180px;
     min-height: 180px;
     box-sizing: border-box; 
     
     opacity: 0;
-
 }
+
 
 /* The Close Button */
 .close {

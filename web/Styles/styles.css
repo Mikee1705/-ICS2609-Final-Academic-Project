@@ -1,27 +1,29 @@
-body {
+html, body {
+    background-color: #f8f9fa; 
+    color: #212529;     
     display: flex;
     flex-direction: column;
-    align-items: center;
-    color: #fff;
-    transition: .25s;
+    min-height: 100vh; 
+    margin: 0;
 }
 
 .box {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    width: 300px;
-    height: 200px;
-    margin: auto;
     transition: .25s;
+    flex-grow: 1;
 }
 
-h1 {
+/* TARGET SPECIFIC ELEMENT TO OVERRIDE BOOTSTRAP STYLES */
+body h1, body h2 {
     text-align: center;
-    color: #000;
+    color: #000000;
 }
 
-.btn-warning{
-    background-color: #ffa333;
-    color: white;
+
+
+/* SPECIFIC SELECTOR CHAIN PREVENTS BOOTSTRAP OVERRIDES */
+body .navbar {
+    background-color: #333333 !important;
 }
+
