@@ -151,6 +151,23 @@
     </welcome-file-list>
 
     <!-- ============================================================ -->
+    <!-- ============================================================ -->
+    <!-- PDF REPORT SERVLETS                                           -->
+    <!-- All servlets are @WebServlet-annotated; URLs documented here  -->
+    <!-- for clarity:                                                  -->
+    <!--   /report/users                → USERLIST_<ts>.pdf            -->
+    <!--   /report/courses              → COURSELIST_<ts>.pdf          -->
+    <!--   /report/enrollments          → ENROLLMENTLIST_<ts>.pdf      -->
+    <!--   /report/teacher-assignments  → TEACHERASSIGNMENTS_<ts>.pdf  -->
+    <!--   /report/ratings              → COURSERATINGS_<ts>.pdf       -->
+    <!--                                                               -->
+    <!-- Query params:                                                 -->
+    <!--   scope=all   → all records (admin only)                      -->
+    <!--   scope=mine  → only the logged-in user's records             -->
+    <!--   from=YYYY-MM-DD&to=YYYY-MM-DD → time-bound report           -->
+    <!-- ============================================================ -->
+
+    <!-- ============================================================ -->
     <!-- CUSTOM ERROR PAGES                                            -->
     <!-- Using FrontEnd's single Error.jsp since that file exists.     -->
     <!-- ============================================================ -->
