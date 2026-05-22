@@ -10,7 +10,7 @@ function closeModal() {
     setTimeout(() => {
         modal.classList.remove('open', 'closing');
     }, 300); // Must match CSS animation time (0.3s)
-};
+}
 
 btn.onclick = function () {
     modal.classList.add("open");
