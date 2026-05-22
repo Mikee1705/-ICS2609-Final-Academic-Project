@@ -67,7 +67,8 @@ public class LoginServlet extends HttpServlet {
                         request.getSession().setAttribute("UName", ClientUN);
                         request.getSession().setAttribute("Role", ClientRole);
 
-                        response.sendRedirect("AdminAnalytics.jsp");
+                        // Route through the AnalyticsServlet so the JSP receives real chart data
+                        response.sendRedirect("Analytics");
                     } else {
                         request.getSession().setAttribute("Title", "Invalid Credentials");
                         request.getSession().setAttribute("Error", "Invalid Role");
