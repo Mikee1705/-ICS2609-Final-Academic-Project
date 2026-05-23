@@ -9,7 +9,7 @@ import java.sql.Timestamp;
 public class CourseRating {
 
     private int       ratingId;
-    private int       studentId;
+    private String    studentId;        // VARCHAR(50) — matches Postgres Students.Student_ID
     private int       courseId;
     private int       ratingScore;      // 1–5
     private String    reviewText;       // Optional written review
@@ -27,8 +27,8 @@ public class CourseRating {
     public int getRatingId()                                  { return ratingId; }
     public void setRatingId(int ratingId)                     { this.ratingId = ratingId; }
 
-    public int getStudentId()                                 { return studentId; }
-    public void setStudentId(int studentId)                   { this.studentId = studentId; }
+    public String getStudentId()                              { return studentId; }
+    public void setStudentId(String studentId)                { this.studentId = studentId; }
 
     public int getCourseId()                                  { return courseId; }
     public void setCourseId(int courseId)                     { this.courseId = courseId; }

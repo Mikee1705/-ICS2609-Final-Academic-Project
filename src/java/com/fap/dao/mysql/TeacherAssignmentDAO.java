@@ -40,8 +40,8 @@ public class TeacherAssignmentDAO {
         return list;
     }
 
-    /** Returns all courses assigned to a specific teacher. */
-    public List<TeacherAssignment> getAssignmentsByTeacher(int teacherId) throws SQLException {
+    /** Returns all courses assigned to a specific teacher (Postgres Teacher_ID). */
+    public List<TeacherAssignment> getAssignmentsByTeacher(String teacherId) throws SQLException {
         List<TeacherAssignment> list = new ArrayList<>();
         String sql = "SELECT ta.*, c.Course_Name FROM Teacher_Assignments ta "
                    + "JOIN Courses c ON ta.Course_ID = c.Course_ID "
@@ -49,7 +49,7 @@ public class TeacherAssignmentDAO {
 
         try (Connection conn = MySQLConnection.getConnection(context);
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, teacherId);
+            ps.setString(1, teacherId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) list.add(mapTeacherAssignment(rs));
             }
@@ -64,7 +64,7 @@ public class TeacherAssignmentDAO {
 
         try (Connection conn = MySQLConnection.getConnection(context);
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setInt(1, ta.getTeacherId());
+            ps.setString(1, ta.getTeacherId());
             ps.setInt(2, ta.getCourseId());
             ps.setString(3, ta.getRole() != null ? ta.getRole() : "Primary");
             ps.setDate(4, ta.getAssignedDate() != null
@@ -135,7 +135,7 @@ public class TeacherAssignmentDAO {
      * Used for "print only their records."
      */
     public List<TeacherAssignment> getAssignmentsByTeacherAndDateRange(
-            int teacherId, Date fromDate, Date toDate) throws SQLException {
+            String teacherId, Date fromDate, Date toDate) throws SQLException {
         List<TeacherAssignment> list = new ArrayList<>();
         String sql = "SELECT ta.*, c.Course_Name FROM Teacher_Assignments ta "
                    + "JOIN Courses c ON ta.Course_ID = c.Course_ID "
@@ -144,7 +144,7 @@ public class TeacherAssignmentDAO {
 
         try (Connection conn = MySQLConnection.getConnection(context);
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, teacherId);
+            ps.setString(1, teacherId);
             ps.setDate(2, fromDate);
             ps.setDate(3, toDate);
             try (ResultSet rs = ps.executeQuery()) {
@@ -161,7 +161,7 @@ public class TeacherAssignmentDAO {
     private TeacherAssignment mapTeacherAssignment(ResultSet rs) throws SQLException {
         TeacherAssignment ta = new TeacherAssignment();
         ta.setAssignmentId(rs.getInt("Assignment_ID"));
-        ta.setTeacherId(rs.getInt("Teacher_ID"));
+        ta.setTeacherId(rs.getString("Teacher_ID"));
         ta.setCourseId(rs.getInt("Course_ID"));
         ta.setRole(rs.getString("Role"));
         ta.setAssignedDate(rs.getDate("Assigned_Date"));

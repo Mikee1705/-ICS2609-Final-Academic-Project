@@ -1,7 +1,9 @@
 package com.fap.report;
 
 import com.fap.dao.mysql.CourseRatingDAO;
+import com.fap.dao.postgres.StudentDAO;
 import com.fap.model.CourseRating;
+import com.fap.model.Student;
 import com.fap.model.User;
 import com.fap.util.DateRangeParser;
 import com.itextpdf.text.Document;
@@ -34,12 +36,13 @@ public class CourseRatingReportServlet extends HttpServlet {
             throws ServletException, IOException {
 
         HttpSession session = req.getSession(false);
-        User loggedIn = (session != null) ? (User) session.getAttribute("user") : null;
-
-        if (loggedIn == null) {
+        String me   = (session != null) ? (String) session.getAttribute("UName") : null;
+        String role = (session != null) ? (String) session.getAttribute("Role")  : null;
+        if (me == null || role == null) {
             resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Please log in.");
             return;
         }
+        User loggedIn = new User(me, null, role);
 
         String scope = req.getParameter("scope");
         if (scope == null) scope = "all";
@@ -54,11 +57,25 @@ public class CourseRatingReportServlet extends HttpServlet {
             String subtitle;
 
             if ("mine".equalsIgnoreCase(scope)) {
-                // TODO: scope=mine needs a Derby-username → MySQL-Student_ID mapping.
-                // Pending the PostgreSQL user profile layer (3rd teammate's work).
-                resp.sendError(HttpServletResponse.SC_NOT_IMPLEMENTED,
-                        "scope=mine is pending the PostgreSQL user profile layer.");
-                return;
+                // Identity bridge: Derby username → Postgres Student_ID
+                Student profile = new StudentDAO(getServletContext())
+                        .getStudentByUsername(loggedIn.getUsername());
+                if (profile == null) {
+                    resp.sendError(HttpServletResponse.SC_NOT_FOUND,
+                            "No student profile found for the logged-in user.");
+                    return;
+                }
+                data = dao.getRatingsByStudent(profile.getStudentId());
+                subtitle = "My Ratings — All Records";
+                // Time-bound filter applied in-memory since the DAO method takes Timestamp range only
+                if (useDateRange) {
+                    Timestamp from = new Timestamp(range.getFrom().getTime());
+                    Timestamp to   = new Timestamp(range.getTo().getTime() + 86_399_000L);
+                    data.removeIf(r -> r.getRatedAt() == null
+                            || r.getRatedAt().before(from)
+                            || r.getRatedAt().after(to));
+                    subtitle = "My Ratings — " + range.describe();
+                }
             } else {
                 if (!"Admin".equalsIgnoreCase(loggedIn.getRole())) {
                     resp.sendError(HttpServletResponse.SC_FORBIDDEN,

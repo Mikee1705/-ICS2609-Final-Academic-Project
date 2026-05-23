@@ -1,460 +1,325 @@
 # FAP — System Architecture
 
 > Active Learning, Inc. Course Management System
-> A reference for understanding how the backend layers connect and how data flows through the app.
+> Reference for understanding how the backend layers connect and how data flows across **three** databases.
 
 ---
 
 ## 1. High-Level Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────────────┐
 │                          BROWSER (Client)                            │
-│         JSP pages, HTML forms, "Download Report" buttons             │
-└─────────────────────────────┬───────────────────────────────────────┘
+│         JSP pages • HTML forms • Download Report buttons             │
+└─────────────────────────────┬────────────────────────────────────────┘
                               │ HTTP (GET / POST)
                               ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      GLASSFISH SERVER (Tomcat-EE)                    │
-│                                                                      │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  WEB LAYER  —  /web/WEB-INF/web.xml                          │    │
-│  │   • Reads credentials, report headers/footers                │    │
-│  │   • Maps error pages (403, 404, 500)                         │    │
-│  │   • Session config (30 min timeout)                          │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                              │                                       │
-│                              ▼                                       │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  SERVLET LAYER  —  /src/java/com/fap/report/*                │    │
-│  │   • UserListReportServlet                                    │    │
-│  │   • CourseListReportServlet                                  │    │
-│  │   • EnrollmentReportServlet                                  │    │
-│  │   • TeacherAssignmentReportServlet                           │    │
-│  │   • CourseRatingReportServlet                                │    │
-│  │   (Plus future: LoginServlet, AdminServlet, etc.)            │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                              │                                       │
-│                              ▼                                       │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  DAO LAYER  —  /src/java/com/fap/dao/                        │    │
-│  │   • dao/derby/UserDAO       (Derby)                          │    │
-│  │   • dao/mysql/CourseDAO     (MySQL)                          │    │
-│  │   • dao/mysql/EnrollmentDAO (MySQL)                          │    │
-│  │   • dao/mysql/TeacherAssignmentDAO (MySQL)                   │    │
-│  │   • dao/mysql/CourseRatingDAO (MySQL)                        │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                              │                                       │
-│                              ▼                                       │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  CONNECTION UTILITIES  —  /src/java/com/fap/db/              │    │
-│  │   • MySQLConnection    reads mysql.* params from web.xml     │    │
-│  │   • DerbyConnection    reads derby.* params from web.xml     │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-└─────────────────────────────┬───────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                       GLASSFISH SERVER                                │
+│                                                                       │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │  WEB LAYER  —  web/WEB-INF/web.xml                              │  │
+│  │  • postgres.*  derby.*  mysql.* credentials                     │  │
+│  │  • EncryptionKey + SecretKey (AES + reCAPTCHA)                  │  │
+│  │  • report.header / report.footer                                │  │
+│  │  • Error page mapping (401/403/404/500) → Error.jsp             │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                              │                                        │
+│                              ▼                                        │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │  SERVLET LAYER                                                  │  │
+│  │  Servlets.*                                                     │  │
+│  │   • LoginServlet, CaptchaServlet, LogoutServlet                 │  │
+│  │   • CourseServlet, StudentServlet, InstructorServlet            │  │
+│  │   • AnalyticsServlet, DevLoginServlet                           │  │
+│  │  com.fap.report.*                                               │  │
+│  │   • 5 PDF report servlets (Users/Courses/Enrollments/etc.)      │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                              │                                        │
+│                              ▼                                        │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │  DAO LAYER  —  com.fap.dao.*                                    │  │
+│  │   • dao/derby/UserDAO       — auth                              │  │
+│  │   • dao/postgres/StudentDAO, TeacherDAO, SalutationDAO          │  │
+│  │   • dao/mysql/Course/Enrollment/TeacherAssignment/CourseRating  │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                              │                                        │
+│                              ▼                                        │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │  CONNECTION UTILITIES  —  com.fap.db.*                          │  │
+│  │   • DerbyConnection      ← reads derby.*    from web.xml        │  │
+│  │   • PostgresConnection   ← reads postgres.* from web.xml        │  │
+│  │   • MySQLConnection      ← reads mysql.*    from web.xml        │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────┬────────────────────────────────────────┘
                               │  JDBC
-        ┌─────────────────────┼─────────────────────┐
-        ▼                     ▼                     ▼
-┌──────────────┐      ┌──────────────┐      ┌──────────────┐
-│    DERBY     │      │    MYSQL     │      │  (DBMS #3)   │
-│ (Auth Layer) │      │ (Academic)   │      │  Pending     │
-│              │      │              │      │              │
-│  • USERS     │      │  • Courses   │      │  TBD         │
-│              │      │  • Lessons   │      │              │
-│              │      │  • Assigns   │      │              │
-│              │      │  • Enrollment│      │              │
-│              │      │  • Teacher_Ax│      │              │
-│              │      │  • Ratings   │      │              │
-└──────────────┘      └──────────────┘      └──────────────┘
+        ┌─────────────────────┼──────────────────────┐
+        ▼                     ▼                      ▼
+┌──────────────┐      ┌────────────────┐      ┌───────────────────┐
+│    DERBY     │      │   POSTGRESQL   │      │      MYSQL         │
+│  (LoginDB)   │      │   (postgres)   │      │ (fap_activelearning)│
+│ Auth Layer   │      │ Profile Layer  │      │  Academic Layer    │
+│              │      │                │      │                    │
+│ • USERS      │◄────►│ • Students     │◄────►│ • Courses          │
+│   USERNAME PK│      │ • Teachers     │      │ • Course_Lessons   │
+│   PASSWORD   │      │ • Salutations  │      │ • Course_Assignments│
+│   USERROLE   │      │ • Student_Phones│     │ • Enrollments      │
+│              │      │                │      │ • Teacher_Assignments│
+│              │      │ Username  ⇆    │      │ • Course_Ratings   │
+│              │      │ Student/Teacher│      │   (Student/Teacher │
+│              │      │   _ID          │      │    IDs are VARCHAR │
+│              │      │                │      │    matching Postgres)│
+└──────────────┘      └────────────────┘      └───────────────────┘
+       ▲                       ▲                       ▲
+       │                       │                       │
+       └──── Identity ─────────┴──────── Foreign ──────┘
+            bridge via              key (Postgres ID)
+            Username                used by MySQL
 ```
 
 ---
 
-## 2. Folder Structure
+## 2. The 3-DBMS Data Contract
+
+| DBMS | Database | Owner | Purpose | Key Fields |
+|---|---|---|---|---|
+| **Derby** | `LoginDB` | Teammate 2 | Authentication only | `USERNAME` (PK), `PASSWORD` (AES), `USERROLE` |
+| **PostgreSQL** | `postgres` | Teammate 3 | User profiles | `Student_ID` / `Teacher_ID` (VARCHAR PKs), `Username` (UNIQUE — bridge) |
+| **MySQL** | `fap_activelearning` | Backend lead | Academic records | `Student_ID` / `Teacher_ID` (VARCHAR FKs to Postgres) |
+
+### ID Convention
+
+| ID Range | Role | DB Location |
+|---|---|---|
+| `1–5` | Admins | Derby only |
+| `6–15` | Teachers | Derby (auth) + Postgres (profile) |
+| `16–55` | Students | Derby (auth) + Postgres (profile) |
+
+### Identity Bridge
+
+```
+Derby.USERS.USERNAME  ⇆  Postgres.Students.Username (UNIQUE)
+                      ⇆  Postgres.Teachers.Username (UNIQUE)
+
+Then:  Postgres.Students.Student_ID  →  MySQL.Enrollments.Student_ID
+       Postgres.Students.Student_ID  →  MySQL.Course_Ratings.Student_ID
+       Postgres.Teachers.Teacher_ID  →  MySQL.Teacher_Assignments.Teacher_ID
+```
+
+This means: given a logged-in Derby username, we can JOIN through Postgres to find the matching MySQL records. That's how `scope=mine` PDF reports work.
+
+---
+
+## 3. Folder Structure
 
 ```
 FAP/
-├── README.md                                ← Setup guide for teammates
-├── ARCHITECTURE.md                          ← This document
-├── build.xml                                ← NetBeans Ant build script
-│
-├── nbproject/                               ← NetBeans config (relative paths)
-│   ├── project.properties                   ← Library references → web/WEB-INF/lib
-│   └── private/                             ← Per-machine (gitignored)
+├── README.md                        ← Setup guide for teammates
+├── ARCHITECTURE.md                  ← This document
 │
 ├── sql/
-│   ├── mysql_setup.sql                      ← Run to create MySQL tables + seed
-│   └── derby_setup.sql                      ← Run to create Derby USERS + 55 seed users
+│   ├── mysql_setup.sql              ← Run for MySQL: 6 tables + seed
+│   ├── derby_setup.sql              ← Run for Derby: USERS table + 55 users
+│   ├── postgres_setup.sql           ← Run for Postgres (teammate 3's file)
+│   └── mysql_migration_varchar_ids.sql  ← One-time migration if MySQL was set up earlier
 │
 ├── src/java/com/fap/
-│   ├── db/
-│   │   ├── MySQLConnection.java             ← MySQL JDBC, reads web.xml params
-│   │   └── DerbyConnection.java             ← Derby JDBC, reads web.xml params
+│   ├── db/                          ← Connection utilities
+│   │   ├── DerbyConnection.java
+│   │   ├── MySQLConnection.java
+│   │   └── PostgresConnection.java
 │   │
-│   ├── model/                               ← Plain POJOs (one per DB table)
-│   │   ├── User.java                        ← Derby
-│   │   ├── Course.java                      ← MySQL
-│   │   ├── CourseAssignment.java
-│   │   ├── CourseLesson.java
-│   │   ├── Enrollment.java
-│   │   ├── TeacherAssignment.java
-│   │   └── CourseRating.java
+│   ├── model/                       ← Plain POJOs
+│   │   ├── User.java                ← Derby
+│   │   ├── Student.java             ← Postgres
+│   │   ├── Teacher.java             ← Postgres
+│   │   ├── Salutation.java          ← Postgres
+│   │   ├── StudentPhone.java        ← Postgres
+│   │   ├── Course.java              ← MySQL
+│   │   ├── CourseAssignment.java    ← MySQL
+│   │   ├── CourseLesson.java        ← MySQL
+│   │   ├── Enrollment.java          ← MySQL (Student_ID is String)
+│   │   ├── TeacherAssignment.java   ← MySQL (Teacher_ID is String)
+│   │   └── CourseRating.java        ← MySQL (Student_ID is String)
 │   │
 │   ├── dao/
 │   │   ├── derby/
-│   │   │   └── UserDAO.java                 ← getAllUsers, authenticate, insertUser
+│   │   │   └── UserDAO.java
+│   │   ├── postgres/
+│   │   │   ├── StudentDAO.java      ← incl. getStudentByUsername (identity bridge)
+│   │   │   ├── TeacherDAO.java      ← incl. getTeacherByUsername (identity bridge)
+│   │   │   └── SalutationDAO.java
 │   │   └── mysql/
 │   │       ├── CourseDAO.java
 │   │       ├── EnrollmentDAO.java
 │   │       ├── TeacherAssignmentDAO.java
 │   │       └── CourseRatingDAO.java
 │   │
-│   ├── report/                              ← iText 5 PDF generation
-│   │   ├── PdfReportBuilder.java            ← Shared: landscape, filename, response headers
-│   │   ├── PageNumberEventHandler.java      ← Header/footer + Page X of Y on every page
-│   │   ├── UserListReportServlet.java       ← /report/users
-│   │   ├── CourseListReportServlet.java     ← /report/courses
-│   │   ├── EnrollmentReportServlet.java     ← /report/enrollments
-│   │   ├── TeacherAssignmentReportServlet.java ← /report/teacher-assignments
-│   │   └── CourseRatingReportServlet.java   ← /report/ratings
-│   │
-│   ├── dao/postgres/                        ← Placeholder for the 3rd DBMS (PostgreSQL 18)
-│   │   └── README.md                        ← Instructions for the teammate working on Postgres
+│   ├── report/                      ← iText 5 PDF generation
+│   │   ├── PdfReportBuilder.java
+│   │   ├── PageNumberEventHandler.java
+│   │   ├── UserListReportServlet.java
+│   │   ├── CourseListReportServlet.java
+│   │   ├── EnrollmentReportServlet.java         ← scope=mine via Postgres bridge
+│   │   ├── TeacherAssignmentReportServlet.java  ← scope=mine via Postgres bridge
+│   │   └── CourseRatingReportServlet.java       ← scope=mine via Postgres bridge
 │   │
 │   └── util/
-│       ├── DerbySeed.java                   ← main() generates AES-encrypted INSERT statements
-│       └── DateRangeParser.java             ← Parses ?from=YYYY-MM-DD&to=YYYY-MM-DD
+│       ├── DateRangeParser.java
+│       └── DerbySeed.java
+│
+├── src/java/Servlets/               ← Controller layer
+│   ├── LoginServlet.java
+│   ├── CaptchaServlet.java
+│   ├── LogoutServlet.java
+│   ├── Security.java                ← AES encrypt/decrypt
+│   ├── AuthFilter.java              ← session+role checks
+│   ├── CourseServlet.java
+│   ├── StudentServlet.java          ← Derby + Postgres cross-DB writes
+│   ├── InstructorServlet.java       ← Derby + Postgres cross-DB writes
+│   ├── AnalyticsServlet.java
+│   ├── DevLoginServlet.java         ← DEV ONLY — remove before submit
+│   ├── User.java                    ← (legacy POJO, kept for LoginServlet)
+│   └── ...
 │
 └── web/
-    ├── index.html                           ← Frontend placeholder (login screen TBD)
-    ├── Scripts/modal.js
-    ├── Styles/styles.css, Modal.css
+    ├── index.jsp                    ← login form
+    ├── Header.jsp                   ← shared nav (loads Bootstrap once)
+    ├── Footer.jsp
+    ├── AdminAnalytics.jsp           ← chart dashboard
+    ├── Courses_CRUD.jsp
+    ├── Students_CRUD.jsp            ← Postgres profile fields
+    ├── Instructors_CRUD.jsp         ← Postgres profile fields
+    ├── Error.jsp / LoginError.jsp
     └── WEB-INF/
-        ├── web.xml                          ← Deployment descriptor (DB creds, headers, error pages)
-        ├── glassfish-web.xml                ← GlassFish-specific config
-        └── lib/                             ← All JARs committed here
-            ├── derbyclient.jar
-            ├── itextpdf-5.5.13.5.jar
-            └── mysql-connector-j-9.6.0.jar
+        ├── web.xml                  ← All 3 DB credentials + secrets
+        └── lib/                     ← derbyclient + mysql + postgres + itextpdf
 ```
 
 ---
 
-## 3. Layer Responsibilities
+## 4. Key Data Flows
 
-### **Web Layer** (`web.xml`)
-The single source of truth for **sensitive config**. As required by the spec, no credentials are hard-coded in Java.
+### 🔵 Admin loads the Students CRUD page
 
-| Param | Purpose |
+```
+GET /StudentServlet
+  │
+  ▼
+StudentServlet.doGet():
+  ├─ AuthFilter.requireAdmin() ✓
+  ├─ StudentDAO.getAllStudents()      → PostgreSQL SELECT JOIN Salutations
+  ├─ SalutationDAO.getAllSalutations() → PostgreSQL SELECT
+  ├─ req.setAttribute("students", ...)
+  └─ forward → Students_CRUD.jsp
+              renders Student_ID | Username | Full Name | Email | Funding | Registered
+```
+
+### 🟢 Admin adds a new Student (cross-DB write)
+
+```
+POST /StudentServlet?action=add
+  body: StudentId, Username, FirstName, LastName, Email, Funding, SalutationId, Password
+  │
+  ▼
+StudentServlet.handleAdd():
+  ├─ UserDAO.insertUser(username, role=Student, password)  → DERBY
+  │     • password AES-encrypted via Security.Encrypt
+  ├─ StudentDAO.insertStudent(...)                          → POSTGRES
+  │     • Student_ID, Username, salutation, name, email, funding
+  └─ redirect → /StudentServlet  (PRG pattern)
+```
+
+### 🟠 Student downloads "My Enrollments" PDF
+
+```
+GET /report/enrollments?scope=mine
+  │
+  ▼
+EnrollmentReportServlet:
+  ├─ session.UName  = e.g. "sdomingo"
+  ├─ session.Role   = "Student"
+  ├─ StudentDAO.getStudentByUsername("sdomingo")  → POSTGRES
+  │     returns Student{ student_id="16", ... }
+  ├─ EnrollmentDAO.getEnrollmentsByStudent("16")  → MYSQL
+  │     returns List<Enrollment> for that student
+  └─ PdfReportBuilder streams ENROLLMENTLIST_<timestamp>.pdf
+```
+
+---
+
+## 5. Encryption Model
+
+Single source of truth: **`Servlets.Security`** (AES/ECB/PKCS5Padding) with the key in `web.xml`.
+
+| Where used | Operation |
 |---|---|
-| `mysql.driver`, `mysql.url`, `mysql.username`, `mysql.password` | MySQL connection |
-| `derby.driver`, `derby.url`, `derby.username`, `derby.password` | Derby connection |
-| `report.header`, `report.footer` | Used by every PDF report |
-| `app.name`, `app.version` | App metadata |
+| `LoginServlet.getRecords()` | Decrypt — compares plaintext to typed password |
+| `UserDAO.insertUser()` | Encrypt — before INSERT |
+| `UserDAO.updatePassword()` | Encrypt — before UPDATE |
+| `UserDAO.mapUser()` | Decrypt — when reading rows |
+| `DerbySeed.main()` | Encrypt — for generating seed INSERTs |
 
-### **Servlet Layer** (`com.fap.report.*`)
-Each servlet:
-1. **Checks the session** — pulls the logged-in `User` from `session.getAttribute("user")`
-2. **Authorizes the action** — `scope=all` requires Admin role
-3. **Parses params** — `?scope=...`, `?from=...`, `?to=...`
-4. **Calls the DAO** — fetches the data
-5. **Hands off to `PdfReportBuilder`** — builds & streams the PDF
-
-### **DAO Layer** (`com.fap.dao.*`)
-- Uses **PreparedStatements** everywhere → SQL injection safe
-- Maps each `ResultSet` row to a model POJO via private `map*()` methods
-- Includes **report-specific queries** like `getAllEnrollmentsByDateRange()`
-
-### **DB Layer** (`com.fap.db.*`)
-- Reads connection params from `ServletContext` (which reads `web.xml`)
-- Returns a fresh `Connection` per call → DAO closes it via try-with-resources
+No SHA-256, no parallel crypto — exactly one library.
 
 ---
 
-## 4. Data Flow Examples
+## 6. Session Contract
 
-### 🔵 Example A — Admin downloads "All Users" PDF
-
-```
-┌────────┐
-│Browser │  click "Download User List"
-└───┬────┘
-    │ GET /report/users
-    ▼
-┌────────────────────────────────────────┐
-│ UserListReportServlet.doGet()          │
-│  1. session.getAttribute("user")       │ ← who is logged in?
-│  2. check role == Admin                 │ ← gatekeeper
-└───────────────┬────────────────────────┘
-                ▼
-┌────────────────────────────────────────┐
-│ UserDAO.getAllUsers()                   │
-│  uses DerbyConnection.getConnection()   │
-│  reads derby.* from web.xml             │
-└───────────────┬────────────────────────┘
-                ▼
-┌────────────────────────────────────────┐
-│ Derby DB                                │
-│  SELECT * FROM USERS                    │
-│  ORDER BY ROLE, LAST_NAME               │
-└───────────────┬────────────────────────┘
-                │ List<User>
-                ▼
-┌────────────────────────────────────────┐
-│ PdfReportBuilder                        │
-│  • A4 landscape                         │
-│  • filename USERLIST_yyyyMMddHHmmss.pdf │
-│  • Content-Disposition: attachment      │
-│  • PageNumberEventHandler attached      │
-│       ↳ reads report.header/footer      │
-│         from web.xml on every page      │
-└───────────────┬────────────────────────┘
-                │ stream PDF bytes
-                ▼
-┌────────┐
-│Browser │  Save dialog appears → file downloaded
-└────────┘
-```
-
-### 🟢 Example B — Time-Bound Enrollment Report
-
-```
-URL: /report/enrollments?scope=all&from=2026-01-01&to=2026-03-31
-
-Servlet                            DAO                          MySQL
-   │                                │                            │
-   ├─ parse scope=all  ──── admin? ✓│                            │
-   ├─ DateRangeParser ──── from/to ✓│                            │
-   │                                │                            │
-   ├──────────── call ─────────────►│                            │
-   │     getAllEnrollmentsByDateRange(from, to)                  │
-   │                                ├─── SELECT e.*, c.Name  ───►│
-   │                                │    FROM Enrollments e      │
-   │                                │    JOIN Courses c          │
-   │                                │    WHERE e.Enroll_Date     │
-   │                                │      BETWEEN ? AND ?       │
-   │                                │◄────── List<Enrollment> ───┤
-   │◄──────────── data ────────────┤                             │
-   │                                │                            │
-   ├─ PdfReportBuilder.startDocument()                            │
-   ├─ PdfReportBuilder.createTable(headers, widths)               │
-   ├─ for each row: table.addCell(...)                            │
-   ├─ doc.add(table)                                              │
-   └─ close() → bytes streamed to browser
-```
-
-### 🟠 Example C — Login Flow (planned)
-
-```
-┌─ Browser ─┐    POST /login    ┌─ LoginServlet ─┐
-│ username  │ ──────────────────►│                │
-│ password  │                    │ UserDAO        │
-│ captcha   │                    │  .authenticate │
-└───────────┘                    │   (u, p)       │
-                                 │       │        │
-                                 │       ▼        │
-                                 │ PasswordHasher │
-                                 │   .verify()    │
-                                 │  salted SHA256 │
-                                 └───────┬────────┘
-                                         │
-                                ┌────────┴────────┐
-                                ▼                 ▼
-                          if match:          if not:
-                          session.setAttr     resp.sendRedirect
-                            "user", u             "/login.jsp?err=1"
-                          redirect /dashboard
-```
-
----
-
-## 5. The 3 DBMS — Why Each One?
-
-| DBMS | Purpose | Tables | Connection Helper |
+| Attribute | Type | Set by | Used by |
 |---|---|---|---|
-| **Derby (LoginDB)** | Authentication & user accounts. Embedded, low-traffic. | `USERS (USERNAME, PASSWORD, USERROLE)` | `DerbyConnection` |
-| **MySQL (fap_activelearning)** | Core academic data — high-traffic, relational, the "domain". | `Courses`, `Course_Assignments`, `Course_Lessons`, `Enrollments`, `Teacher_Assignments`, `Course_Ratings` | `MySQLConnection` |
-| **PostgreSQL 18** *(in progress by 3rd teammate)* | Third DBMS for the rubric. Folder + README scaffolded at `com/fap/dao/postgres/`. | TBD by teammate | `PostgresConnection` (to be added) |
+| `UName` | String | `LoginServlet` / `DevLoginServlet` | All authenticated JSPs + report servlets |
+| `Role` | String | `LoginServlet` / `DevLoginServlet` | `AuthFilter`, JSP auth guards |
+| `Title` / `Error` | String | `LoginServlet`, `CaptchaServlet` | `LoginError.jsp` |
 
-### How modularity is preserved
-Each DBMS lives behind its own *connection helper* in `com.fap.db.*` and its own
-*DAO package* in `com.fap.dao.<dbms>.*`. To slot in a new DBMS:
-1. Drop the JDBC JAR into `web/WEB-INF/lib/`.
-2. Add `<dbms>.*` context-params to `web.xml`.
-3. Write a `<Dbms>Connection.java` mirroring the existing two.
-4. Write DAOs in `com/fap/dao/<dbms>/`.
-
-No servlets or JSPs change. No model changes. Zero blast radius.
-
-**Why separation matters:**
-The spec requires multiple DBMSs *with context*. Separating auth from academic data demonstrates good systems analysis:
-- Derby's embedded nature is great for sensitive auth tables that rarely change
-- MySQL handles the bulk academic CRUD/reporting workload
-- A third DBMS will demonstrate a context-appropriate choice (e.g., PostgreSQL for analytics, SQLite for portable course exports, Redis for session caching, etc.)
+PDF report servlets reconstruct a `User` object from these on each call. The session never stores a heavy object.
 
 ---
 
-## 6. Security Model
+## 7. URL Map
 
-| Concern | Solution |
-|---|---|
-| **SQL injection** | All queries use `PreparedStatement` with `?` placeholders. No string concatenation. |
-| **Password storage** | AES/ECB/PKCS5Padding via `Servlets.Security` (single source of crypto). EncryptionKey lives in `web.xml`. UserDAO encrypts on INSERT/UPDATE and decrypts on read so callers always see plaintext. |
-| **Sensitive credentials** | Stored in `web.xml` (Deployment Descriptor), never in source code. |
-| **Session-based auth** | Servlets check `session.getAttribute("Role")` / `"UName"` on every request (set by `LoginServlet`). |
-| **Role-based access** | `AuthFilter.requireAdmin()` returns HTTP 403 for non-Admins. |
-| **Captcha** | Google reCAPTCHA v2 wired through `CaptchaServlet` before login is authorized. |
-| **CSRF** | TBD — recommend a per-session token on POST forms. |
-
----
-
-## 7. PDF Report Architecture
-
-Every report follows the same recipe through `PdfReportBuilder`:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 1. Read web.xml params (header/footer) via ServletContext   │
-├─────────────────────────────────────────────────────────────┤
-│ 2. Set response headers:                                    │
-│    Content-Type: application/pdf                            │
-│    Content-Disposition: attachment; filename="..."          │
-│    ←  this forces CLIENT-SIDE download (spec req. #9)       │
-├─────────────────────────────────────────────────────────────┤
-│ 3. Create Document(PageSize.A4.rotate())  ← landscape       │
-├─────────────────────────────────────────────────────────────┤
-│ 4. Attach PageNumberEventHandler:                           │
-│    on every page → write:                                   │
-│      • header (web.xml)                                     │
-│      • "Generated by: <username>"                           │
-│      • "Generated on: <date/time>"                          │
-│      • footer (web.xml)                                     │
-│      • "Page X of Y"                                        │
-├─────────────────────────────────────────────────────────────┤
-│ 5. PdfPTable handles pagination automatically — rows that   │
-│    don't fit on the current page roll onto the next.        │
-│    setHeaderRows(1) → column headers repeat on every page.  │
-├─────────────────────────────────────────────────────────────┤
-│ 6. Filename pattern: NAME_yyyyMMddHHmmss.pdf                │
-│    (built by PdfReportBuilder.buildFilename())              │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 8. URL Map
-
-| URL | Method | Purpose | Roles |
+| URL | Method | Auth | Purpose |
 |---|---|---|---|
-| `/report/users` | GET | User list PDF (50+ users, `*` for current admin) | Admin |
-| `/report/courses` | GET | Course catalog PDF | Authenticated |
-| `/report/enrollments?scope=all` | GET | All enrollments PDF | Admin |
-| `/report/enrollments?scope=mine` | GET | Logged-in user's enrollments | Authenticated |
-| `/report/teacher-assignments?scope=all` | GET | All teacher assignments | Admin |
-| `/report/teacher-assignments?scope=mine` | GET | Logged-in teacher's assignments | Teacher |
-| `/report/ratings?scope=all` | GET | All course ratings | Admin |
-| `/report/ratings?scope=mine` | GET | Logged-in student's ratings | Student |
+| `/` → `index.jsp` | GET | none | Login form |
+| `/CaptchaServlet` | POST | none | Verifies reCAPTCHA → forwards to /Login |
+| `/Login` | POST | none | Authenticates → sets session → redirect /Analytics |
+| `/Logout` | GET | logged-in | Invalidates session → /index.jsp |
+| `/DevLogin` | GET | none | **DEV ONLY** — bypass auth, become admin |
+| `/Analytics` | GET | Admin | Dashboard charts (real MySQL data) |
+| `/CourseServlet` | GET/POST | Admin | Courses CRUD (MySQL) |
+| `/StudentServlet` | GET/POST | Admin | Students CRUD (Derby + Postgres) |
+| `/InstructorServlet` | GET/POST | Admin | Instructors CRUD (Derby + Postgres) |
+| `/report/users` | GET | Admin | Derby USERS PDF |
+| `/report/courses` | GET | logged-in | MySQL Courses PDF |
+| `/report/enrollments` | GET | Admin / Student | MySQL Enrollments PDF |
+| `/report/teacher-assignments` | GET | Admin / Teacher | MySQL Teacher Assignments PDF |
+| `/report/ratings` | GET | Admin / Student | MySQL Course Ratings PDF |
 
-**Optional params on all routes:**
-- `?from=YYYY-MM-DD&to=YYYY-MM-DD` → time-bound filtering
-
----
-
-## 9. Dependency Graph
-
-```
-┌──────────────────────────────────────────────────┐
-│ Report Servlets                                   │
-│  ├─ depends on → DAOs                             │
-│  ├─ depends on → models                           │
-│  ├─ depends on → PdfReportBuilder                 │
-│  ├─ depends on → PageNumberEventHandler           │
-│  └─ depends on → DateRangeParser                  │
-└──────────────────────────────────────────────────┘
-        │
-        ▼
-┌──────────────────────────────────────────────────┐
-│ DAOs (UserDAO, CourseDAO, ...)                    │
-│  ├─ depends on → models                           │
-│  └─ depends on → MySQLConnection / DerbyConnection│
-└──────────────────────────────────────────────────┘
-        │
-        ▼
-┌──────────────────────────────────────────────────┐
-│ Connection Utilities (MySQLConnection, ...)       │
-│  └─ depends on → ServletContext (web.xml)         │
-└──────────────────────────────────────────────────┘
-
-External JARs (web/WEB-INF/lib):
-  ├─ derbyclient.jar              → Derby JDBC driver
-  ├─ mysql-connector-j-9.6.0.jar  → MySQL JDBC driver
-  └─ itextpdf-5.5.13.5.jar        → PDF generation
-```
+**Query params** on all `/report/*`:
+- `scope=all` → admin sees everything
+- `scope=mine` → uses Postgres identity bridge to filter to logged-in user
+- `from=YYYY-MM-DD&to=YYYY-MM-DD` → time-bound
 
 ---
 
-## 10. What's NOT Built Yet
+## 8. Spec Coverage (FAP rubric)
 
-| Feature | Status |
+| Section | Status |
 |---|---|
-| Login servlet + JSP | ⛔ Pending — frontend teammate is on JSPs |
-| Captcha integration | ⛔ Pending — Google reCAPTCHA recommended |
-| Custom error pages (403.jsp, 404.jsp, 500.jsp) | ⛔ Pending — referenced in `web.xml` but JSPs don't exist |
-| Admin CRUD UI | ⛔ Pending — frontend (Voyager-style table list) |
-| Student/Teacher dashboards | ⛔ Pending — frontend |
-| Third DBMS | ⛔ Pending — pick PostgreSQL / SQLite / etc. |
-| User-side servlets (CourseServlet, EnrollServlet, etc.) | ⛔ Pending — separate from report servlets |
+| Reports (25pt) — landscape PDF, paginated, headers/footers, `*` for current admin, time-bound, all/mine | 🟢 Done |
+| Multiple DBMS (25pt) — Derby + MySQL + PostgreSQL all wired into servlets and JSPs | 🟢 Done |
+| Security: AES password encryption + reCAPTCHA | 🟢 Done |
+| UI/UX responsive Bootstrap | 🟢 Done |
+| Context: clear Auth / Profile / Academic separation | 🟢 Done |
+| Usability: custom Error.jsp, try/catch on DAOs, prepared statements | 🟢 Done |
+| Presentation (video) | ⚪ TODO |
 
 ---
 
-## 11. Quick Reference for Future Code
+## 9. Before Final Submission
 
-**Whenever you add a new servlet that needs the DB:**
-
-```java
-@WebServlet("/my-endpoint")
-public class MyServlet extends HttpServlet {
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-            throws ServletException, IOException {
-
-        // 1. Auth check
-        HttpSession session = req.getSession(false);
-        User user = (session != null) ? (User) session.getAttribute("user") : null;
-        if (user == null) {
-            resp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
-        }
-
-        // 2. Call DAO
-        try {
-            MyDAO dao = new MyDAO(getServletContext());
-            List<SomeModel> data = dao.someQuery();
-
-            // 3. Forward to JSP or write response
-            req.setAttribute("data", data);
-            req.getRequestDispatcher("/some.jsp").forward(req, resp);
-        } catch (SQLException e) {
-            throw new ServletException(e);
-        }
-    }
-}
-```
-
-**Whenever you add a new DAO method:**
-
-```java
-public List<MyModel> myReportQuery(Date from, Date to) throws SQLException {
-    List<MyModel> list = new ArrayList<>();
-    String sql = "SELECT * FROM My_Table WHERE Some_Date BETWEEN ? AND ?";
-
-    try (Connection conn = MySQLConnection.getConnection(context);
-         PreparedStatement ps = conn.prepareStatement(sql)) {
-        ps.setDate(1, from);
-        ps.setDate(2, to);
-        try (ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) list.add(mapMyModel(rs));
-        }
-    }
-    return list;
-}
-```
+- [ ] Delete `Servlets.DevLoginServlet` (or rename to make obvious it should be removed)
+- [ ] Run `sql/mysql_migration_varchar_ids.sql` on any pre-existing MySQL data
+- [ ] Verify all 55 Derby users have an AES-encrypted password (rerun `DerbySeed.main()`)
+- [ ] Confirm `web.xml` postgres.password matches the local install
+- [ ] Record the demo video

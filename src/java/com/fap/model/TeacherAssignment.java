@@ -8,7 +8,7 @@ import java.sql.Date;
 public class TeacherAssignment {
 
     private int     assignmentId;
-    private int     teacherId;
+    private String  teacherId;     // VARCHAR(50) — matches Postgres Teachers.Teacher_ID
     private int     courseId;
     private String  role;          // Primary, Co-Instructor, Teaching Assistant
     private Date    assignedDate;
@@ -25,8 +25,8 @@ public class TeacherAssignment {
     public int getAssignmentId()                              { return assignmentId; }
     public void setAssignmentId(int assignmentId)             { this.assignmentId = assignmentId; }
 
-    public int getTeacherId()                                 { return teacherId; }
-    public void setTeacherId(int teacherId)                   { this.teacherId = teacherId; }
+    public String getTeacherId()                              { return teacherId; }
+    public void setTeacherId(String teacherId)                { this.teacherId = teacherId; }
 
     public int getCourseId()                                  { return courseId; }
     public void setCourseId(int courseId)                     { this.courseId = courseId; }

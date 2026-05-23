@@ -1,6 +1,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@ page import="java.util.List" %>
-<%@ page import="com.fap.model.User" %>
+<%@ page import="com.fap.model.Teacher" %>
+<%@ page import="com.fap.model.Salutation" %>
 <%
     // -------- Auth guard --------
     HttpSession sess = request.getSession(false);
@@ -13,8 +14,10 @@
     }
 
     @SuppressWarnings("unchecked")
-    List<User> teachers = (List<User>) request.getAttribute("teachers");
-    if (teachers == null) {
+    List<Teacher> teachers = (List<Teacher>) request.getAttribute("teachers");
+    @SuppressWarnings("unchecked")
+    List<Salutation> salutations = (List<Salutation>) request.getAttribute("salutations");
+    if (teachers == null || salutations == null) {
         response.sendRedirect("InstructorServlet");
         return;
     }
@@ -26,8 +29,8 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Editing Database - Instructors</title>
-        <link rel="stylesheet"
-              href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
+
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
               integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
         <link rel="stylesheet" href="./Styles/styles.css">
     </head>
@@ -52,8 +55,20 @@
                             <form action="InstructorServlet" method="POST">
                                 <input type="hidden" name="action" value="add">
 
-                                <input type="text"     name="Username" class="form-control mb-3" placeholder="Username *" required>
-                                <input type="password" name="Password" class="form-control mb-3" placeholder="Password (blank = Password123)">
+                                <input type="text"  name="TeacherId" class="form-control mb-3" placeholder="Teacher ID *" required>
+                                <input type="text"  name="Username"  class="form-control mb-3" placeholder="Username (login) *" required>
+
+                                <select name="SalutationId" class="form-control mb-3">
+                                    <option value="">Select Salutation</option>
+                                    <% for (Salutation sal : salutations) { %>
+                                        <option value="<%= sal.getSalutationId() %>"><%= sal.getTitle() %></option>
+                                    <% } %>
+                                </select>
+
+                                <input type="text"  name="FirstName" class="form-control mb-3" placeholder="First Name *" required>
+                                <input type="text"  name="LastName"  class="form-control mb-3" placeholder="Last Name *" required>
+
+                                <input type="password" name="Password" class="form-control mb-3" placeholder="Default password (blank = Password123)">
 
                                 <button type="submit" class="btn btn-warning">Add</button>
                             </form>
@@ -74,31 +89,32 @@
                 </div>
             </div>
 
+            <!-- INSTRUCTOR TABLE -->
             <table class='table table-striped table-hover table-bordered my-3'>
                 <thead class="table-light">
                     <tr>
-                        <th>#</th>
+                        <th>Teacher ID</th>
                         <th>Username</th>
-                        <th>Role</th>
+                        <th>Full Name</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="TableBody">
-                    <% int row = 0; for (User t : teachers) { row++; %>
+                    <% for (Teacher t : teachers) { %>
                     <tr>
-                        <td class="align-middle"><%= row %></td>
-                        <td class="align-middle"><%= t.getUsername() %></td>
-                        <td class="align-middle"><%= t.getRole() %></td>
-                        <td class="align-middle text-nowrap" style="width: 20%">
+                        <td class="align-middle"><%= t.getTeacherId() %></td>
+                        <td class="align-middle"><%= t.getUsername() == null ? "" : t.getUsername() %></td>
+                        <td class="align-middle"><%= t.getFullName() %></td>
+                        <td class="align-middle text-nowrap" style="width: 15%">
                             <button type="button" class="btn btn-danger btn-sm"
-                                    data-toggle="modal" data-target="#dltModal<%= row %>">
+                                    data-toggle="modal" data-target="#dltModal<%= t.getTeacherId() %>">
                                 Delete
                             </button>
                         </td>
                     </tr>
 
                     <!-- DELETE MODAL -->
-                    <div class="modal fade" id="dltModal<%= row %>" tabindex="-1" role="dialog" aria-hidden="true">
+                    <div class="modal fade" id="dltModal<%= t.getTeacherId() %>" tabindex="-1" role="dialog" aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered" role="document">
                             <div class="modal-content">
                                 <div class="modal-header">
@@ -109,11 +125,13 @@
                                 </div>
                                 <div class="modal-body">
                                     <div class="alert alert-danger text-center" role="alert">
-                                        <strong>Warning!</strong> <%= t.getUsername() %> will be permanently removed.
+                                        <strong>Warning!</strong> <%= t.getFullName() %> (<%= t.getUsername() %>)
+                                        will be permanently removed from both Derby and PostgreSQL.
                                     </div>
                                     <form action="InstructorServlet" method="POST" class="d-flex justify-content-center">
-                                        <input type="hidden" name="action"   value="delete">
-                                        <input type="hidden" name="Username" value="<%= t.getUsername() %>">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="TeacherId" value="<%= t.getTeacherId() %>">
+                                        <input type="hidden" name="Username" value="<%= t.getUsername() == null ? "" : t.getUsername() %>">
                                         <button type="submit" class="btn btn-danger">Confirm Delete</button>
                                     </form>
                                 </div>

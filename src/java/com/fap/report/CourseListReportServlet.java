@@ -33,12 +33,13 @@ public class CourseListReportServlet extends HttpServlet {
             throws ServletException, IOException {
 
         HttpSession session = req.getSession(false);
-        User loggedIn = (session != null) ? (User) session.getAttribute("user") : null;
-
-        if (loggedIn == null) {
+        String me   = (session != null) ? (String) session.getAttribute("UName") : null;
+        String role = (session != null) ? (String) session.getAttribute("Role")  : null;
+        if (me == null || role == null) {
             resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Please log in.");
             return;
         }
+        User loggedIn = new User(me, null, role);
 
         String scope = req.getParameter("scope");
         if (scope == null) scope = "all";
