@@ -54,17 +54,11 @@ public class CourseRatingReportServlet extends HttpServlet {
             String subtitle;
 
             if ("mine".equalsIgnoreCase(scope)) {
-                data = dao.getRatingsByStudent(loggedIn.getUserId());
-                subtitle = "My Ratings — All Records";
-                // Time-bound for "mine" is not implemented at DAO level; filter here.
-                if (useDateRange) {
-                    Timestamp from = new Timestamp(range.getFrom().getTime());
-                    Timestamp to   = new Timestamp(range.getTo().getTime() + 86_399_000L); // end of day
-                    data.removeIf(r -> r.getRatedAt() == null
-                            || r.getRatedAt().before(from)
-                            || r.getRatedAt().after(to));
-                    subtitle = "My Ratings — " + range.describe();
-                }
+                // TODO: scope=mine needs a Derby-username → MySQL-Student_ID mapping.
+                // Pending the PostgreSQL user profile layer (3rd teammate's work).
+                resp.sendError(HttpServletResponse.SC_NOT_IMPLEMENTED,
+                        "scope=mine is pending the PostgreSQL user profile layer.");
+                return;
             } else {
                 if (!"Admin".equalsIgnoreCase(loggedIn.getRole())) {
                     resp.sendError(HttpServletResponse.SC_FORBIDDEN,

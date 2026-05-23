@@ -53,15 +53,13 @@ public class EnrollmentReportServlet extends HttpServlet {
             String subtitle;
 
             if ("mine".equalsIgnoreCase(scope)) {
-                // "print only their records"
-                if (useDateRange) {
-                    data = dao.getEnrollmentsByStudentAndDateRange(
-                            loggedIn.getUserId(), range.getFrom(), range.getTo());
-                    subtitle = "My Enrollments — " + range.describe();
-                } else {
-                    data = dao.getEnrollmentsByStudent(loggedIn.getUserId());
-                    subtitle = "My Enrollments — All Records";
-                }
+                // TODO: scope=mine needs a Derby-username → MySQL-Student_ID mapping.
+                // That mapping lives in the PostgreSQL "user profile" DB being built
+                // by the 3rd teammate. Until that's wired up, return 501 Not
+                // Implemented so the call fails loudly instead of silently lying.
+                resp.sendError(HttpServletResponse.SC_NOT_IMPLEMENTED,
+                        "scope=mine is pending the PostgreSQL user profile layer.");
+                return;
             } else {
                 // ALL records (admin only)
                 if (!"Admin".equalsIgnoreCase(loggedIn.getRole())) {

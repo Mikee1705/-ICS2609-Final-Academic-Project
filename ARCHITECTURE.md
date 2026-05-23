@@ -118,8 +118,11 @@ FAP/
 │   │   ├── TeacherAssignmentReportServlet.java ← /report/teacher-assignments
 │   │   └── CourseRatingReportServlet.java   ← /report/ratings
 │   │
+│   ├── dao/postgres/                        ← Placeholder for the 3rd DBMS (PostgreSQL 18)
+│   │   └── README.md                        ← Instructions for the teammate working on Postgres
+│   │
 │   └── util/
-│       ├── PasswordHasher.java              ← Salted SHA-256
+│       ├── DerbySeed.java                   ← main() generates AES-encrypted INSERT statements
 │       └── DateRangeParser.java             ← Parses ?from=YYYY-MM-DD&to=YYYY-MM-DD
 │
 └── web/
@@ -267,11 +270,21 @@ Servlet                            DAO                          MySQL
 
 ## 5. The 3 DBMS — Why Each One?
 
-| DBMS | Purpose | Tables |
-|---|---|---|
-| **Derby** | Authentication & user management (sensitive, low-traffic, embedded) | `USERS` |
-| **MySQL** | Core academic data (high-traffic, complex relationships, the "domain") | `Courses`, `Course_Assignments`, `Course_Lessons`, `Enrollments`, `Teacher_Assignments`, `Course_Ratings` |
-| **DBMS #3** *(pending)* | TBD — pick one and justify the context | *To be added* |
+| DBMS | Purpose | Tables | Connection Helper |
+|---|---|---|---|
+| **Derby (LoginDB)** | Authentication & user accounts. Embedded, low-traffic. | `USERS (USERNAME, PASSWORD, USERROLE)` | `DerbyConnection` |
+| **MySQL (fap_activelearning)** | Core academic data — high-traffic, relational, the "domain". | `Courses`, `Course_Assignments`, `Course_Lessons`, `Enrollments`, `Teacher_Assignments`, `Course_Ratings` | `MySQLConnection` |
+| **PostgreSQL 18** *(in progress by 3rd teammate)* | Third DBMS for the rubric. Folder + README scaffolded at `com/fap/dao/postgres/`. | TBD by teammate | `PostgresConnection` (to be added) |
+
+### How modularity is preserved
+Each DBMS lives behind its own *connection helper* in `com.fap.db.*` and its own
+*DAO package* in `com.fap.dao.<dbms>.*`. To slot in a new DBMS:
+1. Drop the JDBC JAR into `web/WEB-INF/lib/`.
+2. Add `<dbms>.*` context-params to `web.xml`.
+3. Write a `<Dbms>Connection.java` mirroring the existing two.
+4. Write DAOs in `com/fap/dao/<dbms>/`.
+
+No servlets or JSPs change. No model changes. Zero blast radius.
 
 **Why separation matters:**
 The spec requires multiple DBMSs *with context*. Separating auth from academic data demonstrates good systems analysis:
@@ -286,11 +299,11 @@ The spec requires multiple DBMSs *with context*. Separating auth from academic d
 | Concern | Solution |
 |---|---|
 | **SQL injection** | All queries use `PreparedStatement` with `?` placeholders. No string concatenation. |
-| **Password storage** | Salted SHA-256 (`PasswordHasher`). Stored as `saltHex:hashHex`. Never logged, never printed in reports. |
+| **Password storage** | AES/ECB/PKCS5Padding via `Servlets.Security` (single source of crypto). EncryptionKey lives in `web.xml`. UserDAO encrypts on INSERT/UPDATE and decrypts on read so callers always see plaintext. |
 | **Sensitive credentials** | Stored in `web.xml` (Deployment Descriptor), never in source code. |
-| **Session-based auth** | Servlets check `session.getAttribute("user")` on every request. |
-| **Role-based access** | `scope=all` requires `User.role == "Admin"`. Returns HTTP 403 otherwise. |
-| **Captcha** | Pending — must be added to the login form. |
+| **Session-based auth** | Servlets check `session.getAttribute("Role")` / `"UName"` on every request (set by `LoginServlet`). |
+| **Role-based access** | `AuthFilter.requireAdmin()` returns HTTP 403 for non-Admins. |
+| **Captcha** | Google reCAPTCHA v2 wired through `CaptchaServlet` before login is authorized. |
 | **CSRF** | TBD — recommend a per-session token on POST forms. |
 
 ---

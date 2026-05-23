@@ -1,65 +1,64 @@
 package com.fap.model;
 
-import java.sql.Timestamp;
-
 /**
- * Model: Users table (Derby)
+ * Model: USERS table (Derby — LoginDB)
  *
- * Stored in Derby — the original DBMS carried over from MP2–MP4.
- * Used for authentication and the User List PDF report.
+ * Mirrors the schema used by Servlets.LoginServlet and Servlets.User:
+ *   USERNAME   VARCHAR  (PK / unique)
+ *   PASSWORD   VARCHAR  (AES-encrypted via Servlets.Security)
+ *   USERROLE   VARCHAR  ('Admin' | 'Teacher' | 'Student' | 'Guest')
+ *
+ * Kept intentionally minimal so it stays compatible with the teammate's
+ * existing Login flow. Extra display fields (full name, email, etc.) can
+ * be added later if the schema is extended — until then, getFullName()
+ * just returns the username so JSPs still render cleanly.
+ *
+ * IMPORTANT: the `password` field on this object holds the PLAINTEXT
+ * value when read via UserDAO (which decrypts on the way out). It holds
+ * the ENCRYPTED value when set by UserDAO before an INSERT/UPDATE.
+ * Callers should never read `password` directly off the model unless
+ * they know which side of the DAO boundary they're on.
  */
 public class User {
 
-    public enum Role { Admin, Teacher, Student }
+    public enum Role { Admin, Teacher, Student, Guest }
 
-    private int       userId;
-    private String    username;
-    private String    passwordHash;   // salt:hash — NEVER print this
-    private String    firstName;
-    private String    lastName;
-    private String    email;
-    private String    role;           // Admin / Teacher / Student
-    private boolean   isActive;
-    private Timestamp createdAt;
-    private Timestamp lastLogin;
+    private String username;
+    private String password;   // plaintext (after DAO decrypts) — never persist as-is
+    private String role;
 
     public User() {}
 
-    // Getters & Setters
-    public int getUserId()                                { return userId; }
-    public void setUserId(int userId)                     { this.userId = userId; }
-
-    public String getUsername()                           { return username; }
-    public void setUsername(String username)              { this.username = username; }
-
-    public String getPasswordHash()                       { return passwordHash; }
-    public void setPasswordHash(String passwordHash)      { this.passwordHash = passwordHash; }
-
-    public String getFirstName()                          { return firstName; }
-    public void setFirstName(String firstName)            { this.firstName = firstName; }
-
-    public String getLastName()                           { return lastName; }
-    public void setLastName(String lastName)              { this.lastName = lastName; }
-
-    public String getFullName() {
-        StringBuilder sb = new StringBuilder();
-        if (firstName != null) sb.append(firstName);
-        if (lastName != null)  sb.append(sb.length() > 0 ? " " : "").append(lastName);
-        return sb.toString();
+    public User(String username, String password, String role) {
+        this.username = username;
+        this.password = password;
+        this.role     = role;
     }
 
-    public String getEmail()                              { return email; }
-    public void setEmail(String email)                    { this.email = email; }
+    // ----------------------------------------------------------------
+    // GETTERS / SETTERS
+    // ----------------------------------------------------------------
 
-    public String getRole()                               { return role; }
-    public void setRole(String role)                      { this.role = role; }
+    public String getUsername()              { return username; }
+    public void   setUsername(String s)      { this.username = s; }
 
-    public boolean isActive()                             { return isActive; }
-    public void setActive(boolean isActive)               { this.isActive = isActive; }
+    public String getPassword()              { return password; }
+    public void   setPassword(String s)      { this.password = s; }
 
-    public Timestamp getCreatedAt()                       { return createdAt; }
-    public void setCreatedAt(Timestamp createdAt)         { this.createdAt = createdAt; }
+    public String getRole()                  { return role; }
+    public void   setRole(String s)          { this.role = s; }
 
-    public Timestamp getLastLogin()                       { return lastLogin; }
-    public void setLastLogin(Timestamp lastLogin)         { this.lastLogin = lastLogin; }
+    /**
+     * Convenience for JSPs/PDFs that ask for a "full name".
+     * The current Derby schema has no name columns, so we fall back to
+     * the username. If the schema is extended later, override this.
+     */
+    public String getFullName() {
+        return username == null ? "" : username;
+    }
+
+    @Override
+    public String toString() {
+        return "User{username='" + username + "', role='" + role + "'}";
+    }
 }
