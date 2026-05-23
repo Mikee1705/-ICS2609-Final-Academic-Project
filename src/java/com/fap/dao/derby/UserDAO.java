@@ -1,8 +1,8 @@
 package com.fap.dao.derby;
 
+import Servlets.Security;
 import com.fap.db.DerbyConnection;
 import com.fap.model.User;
-import com.fap.util.PasswordHasher;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -10,10 +10,25 @@ import java.util.List;
 import javax.servlet.ServletContext;
 
 /**
- * UserDAO (Derby)
+ * UserDAO — Derby (LoginDB.USERS)
  *
- * Manages the USERS table used for authentication and user-list reports.
- * Passwords are stored as salted SHA-256 ("saltHex:hashHex") via PasswordHasher.
+ * RECONCILED VERSION
+ * ------------------
+ * Aligned with teammate 2's existing schema and encryption choice so the
+ * login flow and admin CRUD now agree.
+ *
+ * Schema (must match what LoginServlet expects):
+ *   USERNAME   VARCHAR(50)  PK
+ *   PASSWORD   VARCHAR(255) — AES/ECB/PKCS5Padding via Servlets.Security
+ *   USERROLE   VARCHAR(20)  — 'Admin' / 'Teacher' / 'Student' / 'Guest'
+ *
+ * Encryption: We delegate to Servlets.Security so there is exactly ONE
+ * crypto implementation in the codebase. The EncryptionKey param in
+ * web.xml is the single source of truth.
+ *
+ * Modularity note: this class lives at com.fap.dao.derby.* on purpose.
+ * When the PostgreSQL teammate's table arrives, drop a sibling class
+ * at com.fap.dao.postgres.* — no changes needed here.
  */
 public class UserDAO {
 
@@ -24,13 +39,14 @@ public class UserDAO {
     }
 
     // ----------------------------------------------------------------
-    // CRUD
+    // READ
     // ----------------------------------------------------------------
 
-    /** Returns ALL users — used by the User List PDF report. */
+    /** Returns all users, ordered by role then username. */
     public List<User> getAllUsers() throws SQLException {
         List<User> list = new ArrayList<>();
-        String sql = "SELECT * FROM USERS ORDER BY ROLE, LAST_NAME, FIRST_NAME";
+        String sql = "SELECT USERNAME, PASSWORD, USERROLE FROM USERS "
+                   + "ORDER BY USERROLE, USERNAME";
 
         try (Connection conn = DerbyConnection.getConnection(context);
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -40,9 +56,25 @@ public class UserDAO {
         return list;
     }
 
-    /** Returns a user by username. Used for login. */
+    /** Returns all users with a specific role (e.g. "Student", "Teacher"). */
+    public List<User> getUsersByRole(String role) throws SQLException {
+        List<User> list = new ArrayList<>();
+        String sql = "SELECT USERNAME, PASSWORD, USERROLE FROM USERS "
+                   + "WHERE USERROLE = ? ORDER BY USERNAME";
+
+        try (Connection conn = DerbyConnection.getConnection(context);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, role);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(mapUser(rs));
+            }
+        }
+        return list;
+    }
+
+    /** Returns a user by USERNAME, or null if not found. */
     public User getUserByUsername(String username) throws SQLException {
-        String sql = "SELECT * FROM USERS WHERE USERNAME = ?";
+        String sql = "SELECT USERNAME, PASSWORD, USERROLE FROM USERS WHERE USERNAME = ?";
 
         try (Connection conn = DerbyConnection.getConnection(context);
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -54,83 +86,100 @@ public class UserDAO {
         return null;
     }
 
-    /** Returns a user by ID. */
-    public User getUserById(int userId) throws SQLException {
-        String sql = "SELECT * FROM USERS WHERE USER_ID = ?";
-
-        try (Connection conn = DerbyConnection.getConnection(context);
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, userId);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return mapUser(rs);
-            }
-        }
-        return null;
-    }
-
     /**
-     * Verifies username/password using salted SHA-256.
+     * Verify credentials (used by LoginServlet — optional alternative path).
      * Returns the User on success, null on failure.
      */
     public User authenticate(String username, String plainPassword) throws SQLException {
         User u = getUserByUsername(username);
-        if (u == null || !u.isActive()) return null;
-        if (PasswordHasher.verify(plainPassword, u.getPasswordHash())) {
+        if (u == null) return null;
+        if (plainPassword != null && plainPassword.equals(u.getPassword())) {
             return u;
         }
         return null;
     }
 
-    /** Inserts a new user. Password is automatically hashed. */
-    public int insertUser(User user, String plainPassword) throws SQLException {
-        String sql = "INSERT INTO USERS (USERNAME, PASSWORD_HASH, FIRST_NAME, LAST_NAME, "
-                   + "EMAIL, ROLE, IS_ACTIVE) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    // ----------------------------------------------------------------
+    // WRITE
+    // ----------------------------------------------------------------
 
-        try (Connection conn = DerbyConnection.getConnection(context);
-             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setString(1, user.getUsername());
-            ps.setString(2, PasswordHasher.hash(plainPassword));
-            ps.setString(3, user.getFirstName());
-            ps.setString(4, user.getLastName());
-            ps.setString(5, user.getEmail());
-            ps.setString(6, user.getRole());
-            ps.setBoolean(7, user.isActive());
-            ps.executeUpdate();
+    /**
+     * Inserts a new user. The plaintext password is AES-encrypted
+     * via Servlets.Security before being stored.
+     */
+    public boolean insertUser(User user, String plainPassword) throws SQLException {
+        String sql = "INSERT INTO USERS (USERNAME, PASSWORD, USERROLE) VALUES (?, ?, ?)";
 
-            try (ResultSet keys = ps.getGeneratedKeys()) {
-                if (keys.next()) return keys.getInt(1);
-            }
+        String encrypted = Security.Encrypt(context, plainPassword);
+        if (encrypted == null) {
+            throw new SQLException("Password encryption failed — check EncryptionKey in web.xml.");
         }
-        return -1;
-    }
-
-    /** Updates the LAST_LOGIN timestamp for a user. */
-    public void touchLastLogin(int userId) throws SQLException {
-        String sql = "UPDATE USERS SET LAST_LOGIN = CURRENT_TIMESTAMP WHERE USER_ID = ?";
 
         try (Connection conn = DerbyConnection.getConnection(context);
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, userId);
-            ps.executeUpdate();
+            ps.setString(1, user.getUsername());
+            ps.setString(2, encrypted);
+            ps.setString(3, user.getRole());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /** Update a user's role. */
+    public boolean updateRole(String username, String newRole) throws SQLException {
+        String sql = "UPDATE USERS SET USERROLE = ? WHERE USERNAME = ?";
+
+        try (Connection conn = DerbyConnection.getConnection(context);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newRole);
+            ps.setString(2, username);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /** Update a user's password (will be AES-encrypted). */
+    public boolean updatePassword(String username, String newPlainPassword) throws SQLException {
+        String sql = "UPDATE USERS SET PASSWORD = ? WHERE USERNAME = ?";
+
+        String encrypted = Security.Encrypt(context, newPlainPassword);
+        if (encrypted == null) {
+            throw new SQLException("Password encryption failed.");
+        }
+
+        try (Connection conn = DerbyConnection.getConnection(context);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, encrypted);
+            ps.setString(2, username);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /** Delete a user by USERNAME. */
+    public boolean deleteUser(String username) throws SQLException {
+        String sql = "DELETE FROM USERS WHERE USERNAME = ?";
+
+        try (Connection conn = DerbyConnection.getConnection(context);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            return ps.executeUpdate() > 0;
         }
     }
 
     // ----------------------------------------------------------------
-    // MAPPER
+    // INTERNAL — ResultSet → User
     // ----------------------------------------------------------------
 
+    /**
+     * Maps a row of (USERNAME, PASSWORD, USERROLE) to a User object.
+     * PASSWORD is decrypted here so callers always see plaintext.
+     */
     private User mapUser(ResultSet rs) throws SQLException {
+        String encryptedPw = rs.getString("PASSWORD");
+        String plainPw     = (encryptedPw != null) ? Security.Decrypt(context, encryptedPw.trim()) : null;
+
         User u = new User();
-        u.setUserId(rs.getInt("USER_ID"));
-        u.setUsername(rs.getString("USERNAME"));
-        u.setPasswordHash(rs.getString("PASSWORD_HASH"));
-        u.setFirstName(rs.getString("FIRST_NAME"));
-        u.setLastName(rs.getString("LAST_NAME"));
-        u.setEmail(rs.getString("EMAIL"));
-        u.setRole(rs.getString("ROLE"));
-        u.setActive(rs.getBoolean("IS_ACTIVE"));
-        u.setCreatedAt(rs.getTimestamp("CREATED_AT"));
-        u.setLastLogin(rs.getTimestamp("LAST_LOGIN"));
+        u.setUsername(rs.getString("USERNAME") == null ? "" : rs.getString("USERNAME").trim());
+        u.setPassword(plainPw);
+        u.setRole(rs.getString("USERROLE") == null ? "" : rs.getString("USERROLE").trim());
         return u;
     }
 }

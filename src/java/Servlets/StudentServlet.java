@@ -5,7 +5,6 @@ import com.fap.model.User;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -14,16 +13,16 @@ import javax.servlet.http.*;
 /**
  * StudentServlet
  *
- * Lists/edits users where ROLE = 'Student'. Source: Derby USERS table.
+ * Lists/edits users where USERROLE = 'Student' (Derby).
  *
  * Endpoints:
- *   GET  /StudentServlet               → forward to Students_CRUD.jsp with student list
- *   POST /StudentServlet?action=add    → insert new student (password defaults to "Password123")
- *   POST /StudentServlet?action=edit   → update student
- *   POST /StudentServlet?action=delete → delete student
+ *   GET  /StudentServlet                  → forward to Students_CRUD.jsp
+ *   POST /StudentServlet?action=add       → insert new student
+ *   POST /StudentServlet?action=delete    → delete by username
  *
  * Form fields:
- *   StudentId, Username, FirstName, LastName, Email, Password (only on add)
+ *   Username, Password    (add only)
+ *   Username              (delete)
  */
 @WebServlet("/StudentServlet")
 public class StudentServlet extends HttpServlet {
@@ -36,11 +35,7 @@ public class StudentServlet extends HttpServlet {
 
         try {
             UserDAO dao = new UserDAO(getServletContext());
-            List<User> all = dao.getAllUsers();
-            List<User> students = new ArrayList<>();
-            for (User u : all) {
-                if ("Student".equalsIgnoreCase(u.getRole())) students.add(u);
-            }
+            List<User> students = dao.getUsersByRole("Student");
             req.setAttribute("students", students);
             req.getRequestDispatcher("/Students_CRUD.jsp").forward(req, resp);
         } catch (SQLException e) {
@@ -62,8 +57,7 @@ public class StudentServlet extends HttpServlet {
 
             switch (action.toLowerCase()) {
                 case "add":    handleAdd(req, dao);    break;
-                case "edit":   /* TODO: UserDAO.updateUser — add in next iteration */ break;
-                case "delete": /* TODO: UserDAO.deleteUser — add in next iteration */ break;
+                case "delete": handleDelete(req, dao); break;
                 default:
                     resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Unknown action: " + action);
                     return;
@@ -76,22 +70,23 @@ public class StudentServlet extends HttpServlet {
         }
     }
 
+    // ----------------------------------------------------------------
+
     private void handleAdd(HttpServletRequest req, UserDAO dao) throws SQLException {
-        User u = new User();
-        u.setUsername(orDefault(req.getParameter("Username"), ""));
-        u.setFirstName(orDefault(req.getParameter("FirstName"), ""));
-        u.setLastName(orDefault(req.getParameter("LastName"), ""));
-        u.setEmail(orDefault(req.getParameter("Email"), ""));
-        u.setRole("Student");
-        u.setActive(true);
+        String username = trim(req.getParameter("Username"));
+        String pw       = req.getParameter("Password");
+        if (pw == null || pw.isEmpty()) pw = "Password123";
 
-        String pw = req.getParameter("Password");
-        if (pw == null || pw.isEmpty()) pw = "Password123"; // default — admin should reset later
-
+        User u = new User(username, null, "Student");
         dao.insertUser(u, pw);
     }
 
-    private static String orDefault(String s, String def) {
-        return (s == null || s.trim().isEmpty()) ? def : s.trim();
+    private void handleDelete(HttpServletRequest req, UserDAO dao) throws SQLException {
+        String username = trim(req.getParameter("Username"));
+        if (!username.isEmpty()) dao.deleteUser(username);
+    }
+
+    private static String trim(String s) {
+        return s == null ? "" : s.trim();
     }
 }

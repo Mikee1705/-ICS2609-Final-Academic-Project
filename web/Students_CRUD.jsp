@@ -26,8 +26,8 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Editing Database - Students</title>
-
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
+        <link rel="stylesheet"
+              href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
               integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
         <link rel="stylesheet" href="./Styles/styles.css">
     </head>
@@ -52,11 +52,8 @@
                             <form action="StudentServlet" method="POST">
                                 <input type="hidden" name="action" value="add">
 
-                                <input type="text"  name="Username"  class="form-control mb-3" placeholder="Username *" required>
-                                <input type="text"  name="FirstName" class="form-control mb-3" placeholder="First Name *" required>
-                                <input type="text"  name="LastName"  class="form-control mb-3" placeholder="Last Name *" required>
-                                <input type="email" name="Email"     class="form-control mb-3" placeholder="Email *" required>
-                                <input type="password" name="Password" class="form-control mb-3" placeholder="Default password (leave blank for Password123)">
+                                <input type="text"     name="Username" class="form-control mb-3" placeholder="Username *" required>
+                                <input type="password" name="Password" class="form-control mb-3" placeholder="Password (blank = Password123)">
 
                                 <button type="submit" class="btn btn-warning">Add</button>
                             </form>
@@ -77,36 +74,31 @@
                 </div>
             </div>
 
-            <!-- STUDENT TABLE -->
             <table class='table table-striped table-hover table-bordered my-3'>
                 <thead class="table-light">
                     <tr>
-                        <th>Student ID</th>
+                        <th>#</th>
                         <th>Username</th>
-                        <th>Full Name</th>
-                        <th>Email</th>
-                        <th>Status</th>
+                        <th>Role</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="studentTableBody">
-                    <% for (User s : students) { %>
+                    <% int row = 0; for (User s : students) { row++; %>
                     <tr>
-                        <td class="align-middle"><%= s.getUserId() %></td>
+                        <td class="align-middle"><%= row %></td>
                         <td class="align-middle"><%= s.getUsername() %></td>
-                        <td class="align-middle"><%= s.getFullName() %></td>
-                        <td class="align-middle"><%= s.getEmail() == null ? "" : s.getEmail() %></td>
-                        <td class="align-middle"><%= s.isActive() ? "Active" : "Inactive" %></td>
-                        <td class="align-middle text-nowrap" style="width: 25%">
+                        <td class="align-middle"><%= s.getRole() %></td>
+                        <td class="align-middle text-nowrap" style="width: 20%">
                             <button type="button" class="btn btn-danger btn-sm"
-                                    data-toggle="modal" data-target="#dltModal<%= s.getUserId() %>">
+                                    data-toggle="modal" data-target="#dltModal<%= row %>">
                                 Delete
                             </button>
                         </td>
                     </tr>
 
                     <!-- DELETE MODAL -->
-                    <div class="modal fade" id="dltModal<%= s.getUserId() %>" tabindex="-1" role="dialog" aria-hidden="true">
+                    <div class="modal fade" id="dltModal<%= row %>" tabindex="-1" role="dialog" aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered" role="document">
                             <div class="modal-content">
                                 <div class="modal-header">
@@ -117,11 +109,11 @@
                                 </div>
                                 <div class="modal-body">
                                     <div class="alert alert-danger text-center" role="alert">
-                                        <strong>Warning!</strong> <%= s.getFullName() %> will be permanently removed.
+                                        <strong>Warning!</strong> <%= s.getUsername() %> will be permanently removed.
                                     </div>
                                     <form action="StudentServlet" method="POST" class="d-flex justify-content-center">
-                                        <input type="hidden" name="action" value="delete">
-                                        <input type="hidden" name="StudentId" value="<%= s.getUserId() %>">
+                                        <input type="hidden" name="action"   value="delete">
+                                        <input type="hidden" name="Username" value="<%= s.getUsername() %>">
                                         <button type="submit" class="btn btn-danger">Confirm Delete</button>
                                     </form>
                                 </div>

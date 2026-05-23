@@ -53,14 +53,11 @@ public class TeacherAssignmentReportServlet extends HttpServlet {
             String subtitle;
 
             if ("mine".equalsIgnoreCase(scope)) {
-                if (useDateRange) {
-                    data = dao.getAssignmentsByTeacherAndDateRange(
-                            loggedIn.getUserId(), range.getFrom(), range.getTo());
-                    subtitle = "My Assignments — " + range.describe();
-                } else {
-                    data = dao.getAssignmentsByTeacher(loggedIn.getUserId());
-                    subtitle = "My Assignments — All Records";
-                }
+                // TODO: scope=mine needs a Derby-username → MySQL-Teacher_ID mapping.
+                // Pending the PostgreSQL user profile layer (3rd teammate's work).
+                resp.sendError(HttpServletResponse.SC_NOT_IMPLEMENTED,
+                        "scope=mine is pending the PostgreSQL user profile layer.");
+                return;
             } else {
                 if (!"Admin".equalsIgnoreCase(loggedIn.getRole())) {
                     resp.sendError(HttpServletResponse.SC_FORBIDDEN,
