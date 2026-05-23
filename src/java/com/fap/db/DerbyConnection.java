@@ -39,11 +39,6 @@ public class DerbyConnection {
         return DriverManager.getConnection(url, username, password);
     }
 
-    /**
-     * Safely closes a connection without throwing.
-     *
-     * @param conn the connection to close (can be null)
-     */
     public static void close(Connection conn) {
         if (conn != null) {
             try {

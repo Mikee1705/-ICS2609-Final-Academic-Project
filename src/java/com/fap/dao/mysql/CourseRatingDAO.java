@@ -42,7 +42,7 @@ public class CourseRatingDAO {
     }
 
     /** Returns all ratings submitted by a specific student. */
-    public List<CourseRating> getRatingsByStudent(int studentId) throws SQLException {
+    public List<CourseRating> getRatingsByStudent(String studentId) throws SQLException {
         List<CourseRating> list = new ArrayList<>();
         String sql = "SELECT cr.*, c.Course_Name FROM Course_Ratings cr "
                    + "JOIN Courses c ON cr.Course_ID = c.Course_ID "
@@ -50,7 +50,7 @@ public class CourseRatingDAO {
 
         try (Connection conn = MySQLConnection.getConnection(context);
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, studentId);
+            ps.setString(1, studentId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) list.add(mapRating(rs));
             }
@@ -100,7 +100,7 @@ public class CourseRatingDAO {
 
         try (Connection conn = MySQLConnection.getConnection(context);
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setInt(1, rating.getStudentId());
+            ps.setString(1, rating.getStudentId());
             ps.setInt(2, rating.getCourseId());
             ps.setInt(3, rating.getRatingScore());
             ps.setString(4, rating.getReviewText());
@@ -208,7 +208,7 @@ public class CourseRatingDAO {
     private CourseRating mapRating(ResultSet rs) throws SQLException {
         CourseRating r = new CourseRating();
         r.setRatingId(rs.getInt("Rating_ID"));
-        r.setStudentId(rs.getInt("Student_ID"));
+        r.setStudentId(rs.getString("Student_ID"));
         r.setCourseId(rs.getInt("Course_ID"));
         r.setRatingScore(rs.getInt("Rating_Score"));
         r.setReviewText(rs.getString("Review_Text"));

@@ -42,8 +42,8 @@ public class EnrollmentDAO {
         return list;
     }
 
-    /** Returns all enrollments for a specific student. */
-    public List<Enrollment> getEnrollmentsByStudent(int studentId) throws SQLException {
+    /** Returns all enrollments for a specific student (Postgres Student_ID). */
+    public List<Enrollment> getEnrollmentsByStudent(String studentId) throws SQLException {
         List<Enrollment> list = new ArrayList<>();
         String sql = "SELECT e.*, c.Course_Name FROM Enrollments e "
                    + "JOIN Courses c ON e.Course_ID = c.Course_ID "
@@ -51,7 +51,7 @@ public class EnrollmentDAO {
 
         try (Connection conn = MySQLConnection.getConnection(context);
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, studentId);
+            ps.setString(1, studentId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) list.add(mapEnrollment(rs));
             }
@@ -83,7 +83,7 @@ public class EnrollmentDAO {
 
         try (Connection conn = MySQLConnection.getConnection(context);
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setInt(1, enrollment.getStudentId());
+            ps.setString(1, enrollment.getStudentId());
             ps.setInt(2, enrollment.getCourseId());
             ps.setDate(3, enrollment.getEnrollmentDate() != null
                     ? enrollment.getEnrollmentDate()
@@ -172,7 +172,7 @@ public class EnrollmentDAO {
      * Time-bound report: enrollments for a SPECIFIC student between two dates.
      * Used for admin PDF report — "print only their records."
      */
-    public List<Enrollment> getEnrollmentsByStudentAndDateRange(int studentId, Date fromDate, Date toDate)
+    public List<Enrollment> getEnrollmentsByStudentAndDateRange(String studentId, Date fromDate, Date toDate)
             throws SQLException {
         List<Enrollment> list = new ArrayList<>();
         String sql = "SELECT e.*, c.Course_Name FROM Enrollments e "
@@ -182,7 +182,7 @@ public class EnrollmentDAO {
 
         try (Connection conn = MySQLConnection.getConnection(context);
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, studentId);
+            ps.setString(1, studentId);
             ps.setDate(2, fromDate);
             ps.setDate(3, toDate);
             try (ResultSet rs = ps.executeQuery()) {
@@ -217,7 +217,7 @@ public class EnrollmentDAO {
     private Enrollment mapEnrollment(ResultSet rs) throws SQLException {
         Enrollment e = new Enrollment();
         e.setEnrollmentId(rs.getInt("Enrollment_ID"));
-        e.setStudentId(rs.getInt("Student_ID"));
+        e.setStudentId(rs.getString("Student_ID"));
         e.setCourseId(rs.getInt("Course_ID"));
         e.setEnrollmentDate(rs.getDate("Enrollment_Date"));
         e.setCompletionDate(rs.getDate("Completion_Date"));

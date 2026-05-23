@@ -13,7 +13,7 @@ public class Enrollment {
     public enum Status { Active, Completed, Dropped }
 
     private int        enrollmentId;
-    private int        studentId;
+    private String     studentId;     // VARCHAR(50) — matches Postgres Students.Student_ID
     private int        courseId;
     private Date       enrollmentDate;
     private Date       completionDate;
@@ -33,8 +33,8 @@ public class Enrollment {
     public int getEnrollmentId()                                  { return enrollmentId; }
     public void setEnrollmentId(int enrollmentId)                 { this.enrollmentId = enrollmentId; }
 
-    public int getStudentId()                                     { return studentId; }
-    public void setStudentId(int studentId)                       { this.studentId = studentId; }
+    public String getStudentId()                                  { return studentId; }
+    public void setStudentId(String studentId)                    { this.studentId = studentId; }
 
     public int getCourseId()                                      { return courseId; }
     public void setCourseId(int courseId)                         { this.courseId = courseId; }

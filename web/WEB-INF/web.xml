@@ -61,6 +61,27 @@
     </context-param>
 
     <!-- ============================================================ -->
+    <!-- POSTGRESQL CREDENTIALS (DBMS 3 — user profile layer)         -->
+    <!-- ============================================================ -->
+    <context-param>
+        <param-name>postgres.driver</param-name>
+        <param-value>org.postgresql.Driver</param-value>
+    </context-param>
+    <context-param>
+        <param-name>postgres.url</param-name>
+        <param-value>jdbc:postgresql://localhost:5432/postgres</param-value>
+    </context-param>
+    <context-param>
+        <param-name>postgres.username</param-name>
+        <param-value>postgres</param-value>
+    </context-param>
+    <context-param>
+        <param-name>postgres.password</param-name>
+        <param-value>postgres</param-value>
+        <!-- Change this to whatever you set during PostgreSQL install. -->
+    </context-param>
+
+    <!-- ============================================================ -->
     <!-- DERBY CREDENTIALS                                            -->
     <!-- Both naming styles kept so old LoginServlet and new UserDAO  -->
     <!-- continue to work. Refactor to a single style once aligned.   -->
@@ -76,21 +97,21 @@
     </context-param>
     <context-param>
         <param-name>derby.username</param-name>
-        <param-value>APP</param-value>
+        <param-value>app</param-value>
     </context-param>
     <context-param>
         <param-name>derby.password</param-name>
-        <param-value>APP</param-value>
+        <param-value>app</param-value>
     </context-param>
 
     <!-- Legacy style (used by FrontEnd's LoginServlet) -->
     <context-param>
         <param-name>dbUserName</param-name>
-        <param-value>APP</param-value>
+        <param-value>app</param-value>
     </context-param>
     <context-param>
         <param-name>dbPassword</param-name>
-        <param-value>APP</param-value>
+        <param-value>app</param-value>
     </context-param>
     <context-param>
         <param-name>jdbcDriverURL</param-name>

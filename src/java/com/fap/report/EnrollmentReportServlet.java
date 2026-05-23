@@ -1,7 +1,9 @@
 package com.fap.report;
 
 import com.fap.dao.mysql.EnrollmentDAO;
+import com.fap.dao.postgres.StudentDAO;
 import com.fap.model.Enrollment;
+import com.fap.model.Student;
 import com.fap.model.User;
 import com.fap.util.DateRangeParser;
 import com.itextpdf.text.Document;
@@ -32,13 +34,15 @@ public class EnrollmentReportServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
+        // Read the session attributes set by LoginServlet (UName + Role)
         HttpSession session = req.getSession(false);
-        User loggedIn = (session != null) ? (User) session.getAttribute("user") : null;
-
-        if (loggedIn == null) {
+        String me   = (session != null) ? (String) session.getAttribute("UName") : null;
+        String role = (session != null) ? (String) session.getAttribute("Role")  : null;
+        if (me == null || role == null) {
             resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Please log in.");
             return;
         }
+        User loggedIn = new User(me, null, role);
 
         String scope = req.getParameter("scope");
         if (scope == null) scope = "all";
@@ -53,13 +57,23 @@ public class EnrollmentReportServlet extends HttpServlet {
             String subtitle;
 
             if ("mine".equalsIgnoreCase(scope)) {
-                // TODO: scope=mine needs a Derby-username → MySQL-Student_ID mapping.
-                // That mapping lives in the PostgreSQL "user profile" DB being built
-                // by the 3rd teammate. Until that's wired up, return 501 Not
-                // Implemented so the call fails loudly instead of silently lying.
-                resp.sendError(HttpServletResponse.SC_NOT_IMPLEMENTED,
-                        "scope=mine is pending the PostgreSQL user profile layer.");
-                return;
+                // Identity bridge: Derby username → Postgres Student_ID
+                Student profile = new StudentDAO(getServletContext())
+                        .getStudentByUsername(loggedIn.getUsername());
+                if (profile == null) {
+                    resp.sendError(HttpServletResponse.SC_NOT_FOUND,
+                            "No student profile found for the logged-in user.");
+                    return;
+                }
+                String studentId = profile.getStudentId();
+                if (useDateRange) {
+                    data = dao.getEnrollmentsByStudentAndDateRange(
+                            studentId, range.getFrom(), range.getTo());
+                    subtitle = "My Enrollments — " + range.describe();
+                } else {
+                    data = dao.getEnrollmentsByStudent(studentId);
+                    subtitle = "My Enrollments — All Records";
+                }
             } else {
                 // ALL records (admin only)
                 if (!"Admin".equalsIgnoreCase(loggedIn.getRole())) {

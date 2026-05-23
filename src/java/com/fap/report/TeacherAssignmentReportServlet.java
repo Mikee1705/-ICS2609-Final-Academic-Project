@@ -1,6 +1,8 @@
 package com.fap.report;
 
 import com.fap.dao.mysql.TeacherAssignmentDAO;
+import com.fap.dao.postgres.TeacherDAO;
+import com.fap.model.Teacher;
 import com.fap.model.TeacherAssignment;
 import com.fap.model.User;
 import com.fap.util.DateRangeParser;
@@ -33,12 +35,13 @@ public class TeacherAssignmentReportServlet extends HttpServlet {
             throws ServletException, IOException {
 
         HttpSession session = req.getSession(false);
-        User loggedIn = (session != null) ? (User) session.getAttribute("user") : null;
-
-        if (loggedIn == null) {
+        String me   = (session != null) ? (String) session.getAttribute("UName") : null;
+        String role = (session != null) ? (String) session.getAttribute("Role")  : null;
+        if (me == null || role == null) {
             resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Please log in.");
             return;
         }
+        User loggedIn = new User(me, null, role);
 
         String scope = req.getParameter("scope");
         if (scope == null) scope = "all";
@@ -53,11 +56,23 @@ public class TeacherAssignmentReportServlet extends HttpServlet {
             String subtitle;
 
             if ("mine".equalsIgnoreCase(scope)) {
-                // TODO: scope=mine needs a Derby-username → MySQL-Teacher_ID mapping.
-                // Pending the PostgreSQL user profile layer (3rd teammate's work).
-                resp.sendError(HttpServletResponse.SC_NOT_IMPLEMENTED,
-                        "scope=mine is pending the PostgreSQL user profile layer.");
-                return;
+                // Identity bridge: Derby username → Postgres Teacher_ID
+                Teacher profile = new TeacherDAO(getServletContext())
+                        .getTeacherByUsername(loggedIn.getUsername());
+                if (profile == null) {
+                    resp.sendError(HttpServletResponse.SC_NOT_FOUND,
+                            "No teacher profile found for the logged-in user.");
+                    return;
+                }
+                String teacherId = profile.getTeacherId();
+                if (useDateRange) {
+                    data = dao.getAssignmentsByTeacherAndDateRange(
+                            teacherId, range.getFrom(), range.getTo());
+                    subtitle = "My Assignments — " + range.describe();
+                } else {
+                    data = dao.getAssignmentsByTeacher(teacherId);
+                    subtitle = "My Assignments — All Records";
+                }
             } else {
                 if (!"Admin".equalsIgnoreCase(loggedIn.getRole())) {
                     resp.sendError(HttpServletResponse.SC_FORBIDDEN,

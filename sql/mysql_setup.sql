@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS Course_Lessons (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS Enrollments (
     Enrollment_ID       INT             AUTO_INCREMENT PRIMARY KEY,
-    Student_ID          INT             NOT NULL,
+    Student_ID          VARCHAR(50)     NOT NULL,    -- matches Postgres Students.Student_ID
     Course_ID           INT             NOT NULL,
     Enrollment_Date     DATE            NOT NULL DEFAULT (CURRENT_DATE),
     Completion_Date     DATE            NULL,
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS Enrollments (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS Teacher_Assignments (
     Assignment_ID   INT             AUTO_INCREMENT PRIMARY KEY,
-    Teacher_ID      INT             NOT NULL,
+    Teacher_ID      VARCHAR(50)     NOT NULL,    -- matches Postgres Teachers.Teacher_ID
     Course_ID       INT             NOT NULL,
     Role            ENUM('Primary','Co-Instructor','Teaching Assistant') NOT NULL DEFAULT 'Primary',
     Assigned_Date   DATE            NOT NULL DEFAULT (CURRENT_DATE),
@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS Teacher_Assignments (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS Course_Ratings (
     Rating_ID           INT             AUTO_INCREMENT PRIMARY KEY,
-    Student_ID          INT             NOT NULL,
+    Student_ID          VARCHAR(50)     NOT NULL,    -- matches Postgres Students.Student_ID
     Course_ID           INT             NOT NULL,
     Rating_Score        TINYINT         NOT NULL,
     Review_Text         TEXT            NULL,
@@ -162,27 +162,31 @@ INSERT INTO Course_Assignments (Course_ID, Title, Instructions, Assignment_Type,
 (3, 'ER Diagram Exercise',      'Design an ER diagram for a library management system.',      'Project',  '2026-06-20', 50,  30, 1),
 (3, 'SQL Final Exam',           'Written exam covering all SQL and normalization topics.',    'Exam',     '2026-06-25', 100, 60, 1);
 
+-- NOTE: Student_ID / Teacher_ID values below MUST exist in PostgreSQL
+-- (postgres.public.Students / Teachers).  Per the agreed convention:
+--   Postgres Teacher_IDs:  '6'  – '15'
+--   Postgres Student_IDs:  '16' – '55'
 INSERT INTO Enrollments (Student_ID, Course_ID, Enrollment_Date, Status, Progress_Percent, Grade, Certificate_Issued) VALUES
-(1, 1, '2026-01-10', 'Active',    75.00, NULL,  0),
-(1, 2, '2026-01-10', 'Active',    40.00, NULL,  0),
-(2, 1, '2026-01-12', 'Completed', 100.00, 92.50, 1),
-(2, 3, '2026-01-15', 'Active',    60.00, NULL,  0),
-(3, 2, '2026-02-01', 'Dropped',   20.00, NULL,  0),
-(4, 4, '2026-02-05', 'Active',    85.00, NULL,  0),
-(5, 5, '2026-03-01', 'Active',    30.00, NULL,  0);
+('16', 1, '2026-01-10', 'Active',    75.00, NULL,  0),
+('16', 2, '2026-01-10', 'Active',    40.00, NULL,  0),
+('17', 1, '2026-01-12', 'Completed', 100.00, 92.50, 1),
+('17', 3, '2026-01-15', 'Active',    60.00, NULL,  0),
+('18', 2, '2026-02-01', 'Dropped',   20.00, NULL,  0),
+('19', 4, '2026-02-05', 'Active',    85.00, NULL,  0),
+('20', 5, '2026-03-01', 'Active',    30.00, NULL,  0);
 
 INSERT INTO Teacher_Assignments (Teacher_ID, Course_ID, Role, Assigned_Date, Is_Active) VALUES
-(1, 1, 'Primary',           '2026-01-05', 1),
-(1, 2, 'Primary',           '2026-01-05', 1),
-(2, 3, 'Primary',           '2026-01-06', 1),
-(2, 1, 'Co-Instructor',     '2026-01-06', 1),
-(3, 4, 'Primary',           '2026-01-07', 1),
-(3, 5, 'Primary',           '2026-01-08', 1);
+('6', 1, 'Primary',           '2026-01-05', 1),
+('6', 2, 'Primary',           '2026-01-05', 1),
+('7', 3, 'Primary',           '2026-01-06', 1),
+('7', 1, 'Co-Instructor',     '2026-01-06', 1),
+('8', 4, 'Primary',           '2026-01-07', 1),
+('8', 5, 'Primary',           '2026-01-08', 1);
 
 INSERT INTO Course_Ratings (Student_ID, Course_ID, Rating_Score, Review_Text, Would_Recommend, Is_Verified) VALUES
-(1, 1, 5, 'Very well structured and easy to follow!',          1, 1),
-(1, 2, 4, 'Great content but could use more examples.',        1, 1),
-(2, 1, 5, 'Best web dev course I have taken.',                 1, 1),
-(2, 3, 3, 'Content is good but the pace is too fast.',         1, 1),
-(4, 4, 4, 'Loved the wireframing section.',                    1, 1),
-(5, 5, 5, 'Comprehensive and very practical.',                 1, 1);
+('16', 1, 5, 'Very well structured and easy to follow!',          1, 1),
+('16', 2, 4, 'Great content but could use more examples.',        1, 1),
+('17', 1, 5, 'Best web dev course I have taken.',                 1, 1),
+('17', 3, 3, 'Content is good but the pace is too fast.',         1, 1),
+('19', 4, 4, 'Loved the wireframing section.',                    1, 1),
+('20', 5, 5, 'Comprehensive and very practical.',                 1, 1);
