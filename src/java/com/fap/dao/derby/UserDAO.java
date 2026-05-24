@@ -56,11 +56,14 @@ public class UserDAO {
         return list;
     }
 
-    /** Returns all users with a specific role (e.g. "Student", "Teacher"). */
+    /**
+     * Returns all users with a specific role (e.g. "Student", "Teacher").
+     * Case-insensitive — matches the login flow which uses equalsIgnoreCase.
+     */
     public List<User> getUsersByRole(String role) throws SQLException {
         List<User> list = new ArrayList<>();
         String sql = "SELECT USERNAME, PASSWORD, USERROLE FROM USERS "
-                   + "WHERE USERROLE = ? ORDER BY USERNAME";
+                   + "WHERE UPPER(USERROLE) = UPPER(?) ORDER BY USERNAME";
 
         try (Connection conn = DerbyConnection.getConnection(context);
              PreparedStatement ps = conn.prepareStatement(sql)) {

@@ -12,6 +12,7 @@ import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -65,7 +66,17 @@ public class UserListReportServlet extends HttpServlet {
             TeacherDAO teacherDao = new TeacherDAO(getServletContext());  // Postgres
             StudentDAO studentDao = new StudentDAO(getServletContext());  // Postgres
 
-            List<User>    admins   = userDao.getUsersByRole("Admin");
+            // Defensive: pull ALL Derby users and filter for Admin in Java.
+            // This handles every case variant ('Admin', 'admin', 'ADMIN', etc.)
+            // AND surfaces any role strings that don't exactly match 'Admin'.
+            List<User> allDerbyUsers = userDao.getAllUsers();
+            List<User> admins = new ArrayList<>();
+            for (User u : allDerbyUsers) {
+                if (u.getRole() != null && "Admin".equalsIgnoreCase(u.getRole().trim())) {
+                    admins.add(u);
+                }
+            }
+
             List<Teacher> teachers = teacherDao.getAllTeachers();
             List<Student> students = studentDao.getAllStudents();
 
