@@ -60,9 +60,9 @@ All credentials are read from `web/WEB-INF/web.xml`. Don't rename databases.
    ```sql
    CREATE DATABASE IF NOT EXISTS fap_activelearning;
    ```
-5. Reconnect with `Database: fap_activelearning` and run:
-   - `sql/mysql_setup.sql` (schema only — INSERTs will be overwritten)
-   - `sql/mysql_seeder.sql` (full reset with realistic data)
+5. Reconnect with `Database: fap_activelearning` and run, in order:
+   - `sql/mysql_setup.sql` (creates the 6 tables)
+   - `sql/mysql_seeder.sql` (wipes + reseeds with realistic demo data)
 
 ### 2️⃣ Derby (Java DB)
 
@@ -71,10 +71,9 @@ All credentials are read from `web/WEB-INF/web.xml`. Don't rename databases.
    - JDBC URL: `jdbc:derby://localhost:1527/LoginDB;create=true`
    - User: `APP`  Password: `APP`
    - Schema: `APP`
-3. Run `sql/derby_setup.sql` to create the `USERS` table
-4. Right-click `src/java/com/fap/util/DerbySeed.java` → **Run File**
-5. Copy the 55 INSERT statements from the console
-6. Paste into NetBeans Derby SQL editor → run
+3. Right-click the connection → **Execute Command**
+4. Paste the contents of `sql/derby_setup.sql` → run
+   *(self-contained — creates the `USERS` table AND seeds all 55 demo users with AES-encrypted passwords)*
 
 ### 3️⃣ PostgreSQL
 
@@ -87,8 +86,9 @@ All credentials are read from `web/WEB-INF/web.xml`. Don't rename databases.
    - JDBC URL: `jdbc:postgresql://localhost:5432/postgres`
    - User: `postgres`  Password: *(what you set during install)*
    - Schema: `public`
-4. Run **your teammate's postgres setup script** (creates `Salutations`, `Students`, `Teachers`, `Student_Phones` + seed data)
-5. Run `sql/postgres_migration_username.sql` to add the `Username` identity bridge
+4. Right-click the connection → **Execute Command**
+5. Paste the contents of `sql/postgres_setup.sql` → run
+   *(self-contained — creates `Salutations`, `Students`, `Teachers`, `Student_Phones` AND seeds 10 teachers + 40 students with the Username identity bridge)*
 
 ### 4️⃣ Update web.xml passwords
 
@@ -296,7 +296,7 @@ All `/report/*` endpoints accept `?from=YYYY-MM-DD&to=YYYY-MM-DD` for time-bound
 
 | Class | Purpose | How to run |
 |---|---|---|
-| `com.fap.util.DerbySeed` | Generates 55 AES-encrypted INSERT statements for the `USERS` table | Right-click → **Run File**, copy console output |
+| `com.fap.util.DerbySeed` | Generates AES-encrypted INSERT statements (used to bootstrap `derby_setup.sql`; only needed if you want to add new users with a different default password) | Right-click → **Run File**, copy console output |
 | `com.fap.util.DerbyReencrypt` | Re-encrypts existing `USERS.PASSWORD` rows when the encryption key changes between machines | Edit `OLD_KEY` and `NEW_KEY`, then right-click → **Run File** |
 | `com.fap.util.DateRangeParser` | Parses `?from=...&to=...` request params with sensible fallbacks | Used internally by report servlets |
 | `Servlets.Security` | AES/ECB/PKCS5Padding encrypt + decrypt (single source of truth for password crypto) | Called by `LoginServlet`, `UserDAO`, `DerbySeed` |
@@ -306,13 +306,15 @@ All `/report/*` endpoints accept `?from=YYYY-MM-DD&to=YYYY-MM-DD` for time-bound
 
 ## 📄 SQL Scripts
 
+See `sql/README.md` for a focused run-order guide. Quick reference:
+
 | File | Purpose | When to run |
 |---|---|---|
-| `sql/derby_setup.sql` | Creates Derby `USERS` table | Once, on first setup |
-| `sql/mysql_setup.sql` | Creates MySQL schema + minimal seed data | Once, on first setup |
-| `sql/mysql_seeder.sql` | Full reset + realistic seed data for all academic tables | Anytime you want fresh demo data |
-| `sql/mysql_migration_varchar_ids.sql` | One-time ALTER for legacy MySQL DBs (INT → VARCHAR for IDs) | Only if MySQL was set up before the Postgres integration |
-| `sql/postgres_migration_username.sql` | Adds the `Username` identity bridge column to Postgres | Once, after Postgres setup |
+| `sql/derby_setup.sql` | **Complete Derby setup** — `USERS` table + 55 pre-encrypted seed users | Once, on first setup |
+| `sql/postgres_setup.sql` | **Complete Postgres setup** — schema + Salutations + 10 Teachers + 40 Students (with Username bridge) | Once, on first setup |
+| `sql/mysql_setup.sql` | Creates the 6 MySQL tables (schema only) | Once, before `mysql_seeder.sql` |
+| `sql/mysql_seeder.sql` | Full reset + realistic seed data (55 enrollments, 11 teacher assignments, 24 ratings) | Anytime you want fresh demo data |
+| `sql/mysql_migration_varchar_ids.sql` | Legacy ALTER for INT → VARCHAR IDs | Only if MySQL was set up before the Postgres integration |
 
 ---
 
