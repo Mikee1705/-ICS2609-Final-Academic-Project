@@ -1,6 +1,10 @@
 package com.fap.report;
 
 import com.fap.dao.derby.UserDAO;
+import com.fap.dao.postgres.StudentDAO;
+import com.fap.dao.postgres.TeacherDAO;
+import com.fap.model.Student;
+import com.fap.model.Teacher;
 import com.fap.model.User;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.Phrase;
@@ -18,8 +22,13 @@ import javax.servlet.http.*;
  *
  * Generates  USERLIST_yyyyMMddHHmmss.pdf
  *
+ * Cross-DBMS report — aggregates rows from all THREE databases:
+ *   • Admins    pulled from Derby  (LoginDB.USERS, USERROLE = 'Admin')
+ *   • Teachers  pulled from PostgreSQL (postgres.Teachers)
+ *   • Students  pulled from PostgreSQL (postgres.Students)
+ *
  * Spec compliance:
- *   • At least 50 records (USERS seed has 55)
+ *   • At least 50 records (5 admins + 10 teachers + 40 students = 55)
  *   • Lists username + role only (NO passwords printed)
  *   • Asterisk (*) beside the currently logged-in admin
  *   • Landscape, paginated, header/footer from web.xml
@@ -51,15 +60,27 @@ public class UserListReportServlet extends HttpServlet {
         }
 
         try {
-            UserDAO dao = new UserDAO(getServletContext());
-            List<User> users = dao.getAllUsers();
+            // ── Pull from THREE different DBs ────────────────────────
+            UserDAO    userDao    = new UserDAO(getServletContext());     // Derby
+            TeacherDAO teacherDao = new TeacherDAO(getServletContext());  // Postgres
+            StudentDAO studentDao = new StudentDAO(getServletContext());  // Postgres
 
+            List<User>    admins   = userDao.getUsersByRole("Admin");
+            List<Teacher> teachers = teacherDao.getAllTeachers();
+            List<Student> students = studentDao.getAllStudents();
+
+            int total = admins.size() + teachers.size() + students.size();
+
+            // ── Build the PDF ───────────────────────────────────────
             PdfReportBuilder rpt = new PdfReportBuilder(
                     getServletContext(), resp, "USERLIST", me);
             Document doc = rpt.startDocument();
 
             doc.add(rpt.title("User List Report"));
-            doc.add(rpt.subtitle("Total users: " + users.size()));
+            doc.add(rpt.subtitle("Total users: " + total
+                    + "   (Admins: " + admins.size()
+                    + " · Teachers: " + teachers.size()
+                    + " · Students: " + students.size() + ")"));
 
             // Columns: # | Username | Role
             PdfPTable table = rpt.createTable(
@@ -67,15 +88,22 @@ public class UserListReportServlet extends HttpServlet {
                     new String[]{"#", "Username", "Role"});
 
             int rowNum = 1;
-            for (User u : users) {
-                boolean isCurrent = me != null && me.equalsIgnoreCase(u.getUsername());
-                String  display   = (isCurrent ? "* " : "") + safe(u.getUsername());
 
-                table.addCell(rpt.cell(String.valueOf(rowNum++), isCurrent));
-                table.addCell(rpt.cell(display, isCurrent));
-                table.addCell(rpt.cell(safe(u.getRole()), isCurrent));
-                // NOTE: password is intentionally NOT included
+            // ----- Admins (Derby) -----
+            for (User a : admins) {
+                rowNum = addRow(table, rpt, rowNum, a.getUsername(), "Admin", me);
             }
+
+            // ----- Teachers (Postgres) -----
+            for (Teacher t : teachers) {
+                rowNum = addRow(table, rpt, rowNum, t.getUsername(), "Teacher", me);
+            }
+
+            // ----- Students (Postgres) -----
+            for (Student s : students) {
+                rowNum = addRow(table, rpt, rowNum, s.getUsername(), "Student", me);
+            }
+
             doc.add(table);
 
             // Legend
@@ -93,6 +121,18 @@ public class UserListReportServlet extends HttpServlet {
         } catch (Exception e) {
             throw new ServletException("Failed to generate user list PDF", e);
         }
+    }
+
+    /** Renders one row and returns the next row number. */
+    private int addRow(PdfPTable table, PdfReportBuilder rpt, int rowNum,
+                       String username, String role, String currentUser) {
+        boolean isCurrent = currentUser != null && currentUser.equalsIgnoreCase(username);
+        String  display   = (isCurrent ? "* " : "") + safe(username);
+
+        table.addCell(rpt.cell(String.valueOf(rowNum), isCurrent));
+        table.addCell(rpt.cell(display, isCurrent));
+        table.addCell(rpt.cell(role, isCurrent));
+        return rowNum + 1;
     }
 
     private static String safe(String s) { return s == null ? "" : s; }
