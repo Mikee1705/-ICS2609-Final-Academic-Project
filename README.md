@@ -345,36 +345,6 @@ See `sql/README.md` for a focused run-order guide. Quick reference:
 | Bootstrap dropdown looks broken | Browser cached old CSS | Hard refresh (`Ctrl + Shift + R`) |
 | `Tracking Prevention blocked storage` warning | Edge's privacy feature (harmless) | Ignore or switch to Chrome/Firefox |
 
----
-
-## 🧑‍💻 For Team Members
-
-### Git workflow
-
-| Task | Command / Steps |
-|---|---|
-| Start a new feature | Pull `main`, then **Team → Git → Branch/Tag → Create Branch** (check "Checkout") |
-| Commit | **Team → Git → Commit** (Ctrl+K) — uncheck `nbproject/private/`, `build/`, `dist/` |
-| Push branch | **Team → Git → Remote → Push** → pick `origin` → check the branch |
-| Pull request | Open the GitHub URL printed in the push output |
-
-### What NOT to commit
-
-- `nbproject/private/` (machine-specific)
-- `build/`, `dist/` (compiled output)
-- JARs outside `web/WEB-INF/lib/`
-- Personal API keys (use `web.xml` context-params)
-
-### Before final submission
-
-- [ ] Delete `src/java/Servlets/DevLoginServlet.java`
-- [ ] Confirm `web.xml` has the correct PostgreSQL password
-- [ ] Run all 3 setup scripts on a clean machine to verify they work
-- [ ] Generate the demo video
-- [ ] Run all 5 PDF reports and save the outputs to the Google Drive
-
----
-
 ## 📚 Further Reading
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — full system architecture diagram, data flows, design decisions
